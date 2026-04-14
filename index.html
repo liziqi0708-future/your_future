@@ -421,7 +421,7 @@
         <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 class="text-base font-semibold">登录</h2>
-            <p class="text-xs text-slate-500 mt-0.5">输入邮箱，我们会发送一次性登录链接到你的邮箱。</p>
+            <p class="text-xs text-slate-500 mt-0.5">输入邮箱发送验证码；在任意设备打开邮箱获取验证码后，回到本页输入验证码完成登录。</p>
           </div>
           <button id="btnCloseLogin" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -434,8 +434,14 @@
           <input id="loginEmail" type="email" placeholder="name@example.com"
             class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
           <p id="loginHint" class="mt-2 text-xs text-slate-500">
-            提示：请使用可正常收邮件的邮箱。打开邮件里的链接后会自动回到本页面完成登录。
+            提示：你可以用手机打开邮箱查看验证码，但请在当前设备输入验证码完成登录（邮箱链接在哪台设备点开，就只会登录那台设备）。
           </p>
+          <div id="otpBox" class="hidden mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+            <label class="text-xs font-medium text-slate-700">邮箱验证码</label>
+            <input id="loginOtp" inputmode="numeric" autocomplete="one-time-code" placeholder="从邮件中复制粘贴验证码"
+              class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+            <p class="mt-2 text-xs text-slate-500">收不到验证码？请检查垃圾箱，或稍等 1-2 分钟再试。</p>
+          </div>
           <div class="mt-4 flex items-center justify-end gap-2">
             <button id="btnLoginCancel"
               class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
@@ -443,7 +449,11 @@
             </button>
             <button id="btnSendLoginLink"
               class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 active:scale-[0.99] transition">
-              发送登录链接
+              发送验证码
+            </button>
+            <button id="btnVerifyOtp"
+              class="hidden rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.99] transition">
+              验证并登录
             </button>
           </div>
         </div>
@@ -613,7 +623,10 @@
       btnCloseLogin: $('#btnCloseLogin'),
       btnLoginCancel: $('#btnLoginCancel'),
       btnSendLoginLink: $('#btnSendLoginLink'),
+      btnVerifyOtp: $('#btnVerifyOtp'),
       loginEmail: $('#loginEmail'),
+      loginOtp: $('#loginOtp'),
+      otpBox: $('#otpBox'),
       loginHint: $('#loginHint'),
 
       // 云设置（上线版已隐藏，保留 DOM 引用不影响功能）
@@ -843,6 +856,9 @@
         return;
       }
       el.loginEmail.value = '';
+      el.loginOtp.value = '';
+      el.otpBox.classList.add('hidden');
+      el.btnVerifyOtp.classList.add('hidden');
       openOverlay(el.loginOverlay);
       setTimeout(() => el.loginEmail.focus(), 50);
     }
@@ -854,6 +870,7 @@
     function closeCloudSettings() { closeOverlay(el.cloudOverlay); }
 
     async function sendLoginLink(email) {
+      // 这里仍使用 signInWithOtp 触发“发邮件”，但我们推荐用户用“验证码”完成登录（见 verifyOtp）
       if (!sb) throw new Error('Supabase not initialized');
       const redirectTo = getRedirectUrlForEmailLink();
 
@@ -862,6 +879,17 @@
         options: { emailRedirectTo: redirectTo }
       });
       if (error) throw error;
+    }
+
+    async function verifyEmailOtp(email, token) {
+      if (!sb) throw new Error('Supabase not initialized');
+      const { data, error } = await sb.auth.verifyOtp({
+        email,
+        token,
+        type: 'email'
+      });
+      if (error) throw error;
+      return data;
     }
 
     async function logout() {
@@ -1691,10 +1719,27 @@
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('邮箱格式不正确', 'error'); return; }
         try {
           await sendLoginLink(email);
-          toast('登录链接已发送，请去邮箱点击完成登录', 'success');
-          closeLogin();
+          // 显示验证码输入框，用户可用手机/电脑打开邮箱获取验证码
+          el.otpBox.classList.remove('hidden');
+          el.btnVerifyOtp.classList.remove('hidden');
+          toast('验证码邮件已发送：请从邮件中复制验证码，回到这里粘贴并登录', 'success');
+          setTimeout(() => el.loginOtp.focus(), 50);
         } catch (e) {
           toast('发送失败：' + (e?.message || '请稍后重试'), 'error');
+        }
+      });
+
+      el.btnVerifyOtp.addEventListener('click', async () => {
+        const email = el.loginEmail.value.trim();
+        const token = (el.loginOtp.value || '').trim();
+        if (!email) { toast('请输入邮箱', 'error'); return; }
+        if (!token) { toast('请输入邮箱验证码', 'error'); return; }
+        try {
+          await verifyEmailOtp(email, token);
+          toast('登录成功', 'success');
+          closeLogin();
+        } catch (e) {
+          toast('验证码无效或已过期：' + (e?.message || '请重试'), 'error');
         }
       });
 
