@@ -437,6 +437,26 @@
             <label class="text-xs font-medium text-slate-700">密码</label>
             <input id="loginPassword" type="password" placeholder="请输入密码"
               class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+            <div id="passwordConfirmRow" class="hidden mt-3">
+              <label class="text-xs font-medium text-slate-700">确认密码</label>
+              <div class="mt-1 relative">
+                <input id="loginPassword2" type="password" placeholder="再次输入密码"
+                  class="w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+                <span id="pwIconOk" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-emerald-600">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M20 6 9 17l-5-5" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                  </svg>
+                </span>
+                <span id="pwIconBad" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-rose-600">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                    <path d="M12 9v4" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+                    <path d="M12 17h.01" stroke="currentColor" stroke-width="3.5" stroke-linecap="round"/>
+                    <path d="M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20Z" stroke="currentColor" stroke-width="2"/>
+                  </svg>
+                </span>
+              </div>
+              <p class="mt-2 text-xs text-slate-500">两次密码需一致</p>
+            </div>
             <p id="loginHint" class="mt-2 text-xs text-slate-500">忘记密码？点击下方“重置密码”发送邮件。</p>
           </div>
           <div class="mt-4 flex items-center justify-end gap-2">
@@ -668,7 +688,11 @@
       btnForgotPassword: $('#btnForgotPassword'),
       loginEmail: $('#loginEmail'),
       loginPassword: $('#loginPassword'),
+      loginPassword2: $('#loginPassword2'),
       passwordBox: $('#passwordBox'),
+      passwordConfirmRow: $('#passwordConfirmRow'),
+      pwIconOk: $('#pwIconOk'),
+      pwIconBad: $('#pwIconBad'),
       loginHint: $('#loginHint'),
       authModeLabel: $('#authModeLabel'),
 
@@ -916,6 +940,7 @@
       }
       el.loginEmail.value = '';
       el.loginPassword.value = '';
+      el.loginPassword2.value = '';
       setAuthMode('signIn');
       openOverlay(el.loginOverlay);
       setTimeout(() => el.loginEmail.focus(), 50);
@@ -961,11 +986,31 @@
       const isForgot = mode === 'forgot';
 
       el.passwordBox.classList.toggle('hidden', isForgot);
+      el.passwordConfirmRow.classList.toggle('hidden', !isSignUp);
       el.btnForgotPassword.classList.toggle('hidden', isForgot);
       el.btnAuthSwitch.textContent = isSignUp ? '已有账号？登录' : '没有账号？注册';
       el.btnAuthPrimary.textContent = isForgot ? '发送重置邮件' : (isSignUp ? '注册' : '登录');
       el.authModeLabel.textContent = isForgot ? '当前：重置密码' : (isSignUp ? '当前：注册' : '当前：登录');
       el.loginHint.textContent = isForgot ? '提示：我们会发送一封重置密码邮件。' : '忘记密码？点击“重置密码”。';
+
+      // 切换模式时重置校验状态
+      if (!isSignUp) {
+        el.loginPassword2.value = '';
+        el.pwIconOk.classList.add('hidden');
+        el.pwIconBad.classList.add('hidden');
+      } else {
+        updatePasswordMatchUI();
+      }
+    }
+
+    function updatePasswordMatchUI() {
+      if (state.authMode !== 'signUp') return;
+      const p1 = el.loginPassword.value || '';
+      const p2 = el.loginPassword2.value || '';
+      const hasAny = p1.length > 0 || p2.length > 0;
+      const ok = p1.length >= 6 && p1 === p2;
+      el.pwIconOk.classList.toggle('hidden', !(hasAny && ok));
+      el.pwIconBad.classList.toggle('hidden', !(hasAny && !ok));
     }
 
     function openResetOverlay() {
@@ -1807,6 +1852,9 @@
         else setAuthMode('signUp');
       });
 
+      el.loginPassword.addEventListener('input', updatePasswordMatchUI);
+      el.loginPassword2.addEventListener('input', updatePasswordMatchUI);
+
       el.btnForgotPassword.addEventListener('click', () => {
         setAuthMode('forgot');
       });
@@ -1814,6 +1862,7 @@
       el.btnAuthPrimary.addEventListener('click', async () => {
         const email = el.loginEmail.value.trim();
         const password = el.loginPassword.value;
+        const password2 = el.loginPassword2.value;
         if (!email) { toast('请输入邮箱', 'error'); return; }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('邮箱格式不正确', 'error'); return; }
 
@@ -1828,6 +1877,11 @@
           if (!password || password.length < 6) { toast('密码至少 6 位', 'error'); return; }
 
           if (state.authMode === 'signUp') {
+            if (password !== password2) {
+              updatePasswordMatchUI();
+              toast('两次密码不一致', 'error');
+              return;
+            }
             await authSignUp(email, password);
             toast('注册成功，请直接登录', 'success');
             setAuthMode('signIn');
@@ -1838,7 +1892,12 @@
           toast('登录成功', 'success');
           closeLogin();
         } catch (e) {
-          toast('操作失败：' + (e?.message || '请稍后重试'), 'error');
+          const msg = String(e?.message || '');
+          if (/Invalid login credentials/i.test(msg)) {
+            toast('账号未注册或密码错误，请先注册或重置密码', 'error');
+          } else {
+            toast('操作失败：' + (e?.message || '请稍后重试'), 'error');
+          }
         }
       });
 
