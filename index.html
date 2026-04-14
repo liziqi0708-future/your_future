@@ -865,10 +865,35 @@
     }
 
     async function logout() {
-      if (!sb) return;
-      const { error } = await sb.auth.signOut();
-      if (error) toast('退出失败：' + error.message, 'error');
-      else toast('已退出登录', 'success');
+      // 退出按钮“没反应”的常见原因是客户端未初始化或 signOut 抛异常。
+      // 这里做成强健版：无论远端 signOut 成功与否，都先把本地 UI 切回未登录态。
+      if (!sb) {
+        state.session = null;
+        state.userEmail = '';
+        updateAuthUI();
+        state.dataMode = 'local';
+        state.records = loadRecords();
+        state.renderCount = state.pageSize;
+        renderAll();
+        toast('已退出（本地会话已清理）', 'success');
+        return;
+      }
+
+      try {
+        const { error } = await sb.auth.signOut();
+        if (error) throw error;
+        toast('已退出登录', 'success');
+      } catch (e) {
+        toast('退出失败（已清理本地会话）：' + (e?.message || '请稍后重试'), 'error');
+      } finally {
+        state.session = null;
+        state.userEmail = '';
+        updateAuthUI();
+        state.dataMode = 'local';
+        state.records = loadRecords();
+        state.renderCount = state.pageSize;
+        renderAll();
+      }
     }
 
     /* =========================
@@ -1616,11 +1641,17 @@
       el.form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!validateForm()) { toast('请完善必填项/修正错误后再保存', 'error'); return; }
-        await upsertRecordFromForm();
-        closeModal();
-        state.renderCount = state.pageSize;
-        renderAll();
-        toast('保存成功', 'success');
+        try {
+          await upsertRecordFromForm();
+          toast('保存成功', 'success');
+        } catch (err) {
+          // 保底：即使 upsert 内部出现未捕获异常，也不应该卡在弹窗
+          toast('保存失败：' + (err?.message || '请稍后重试'), 'error');
+        } finally {
+          closeModal();
+          state.renderCount = state.pageSize;
+          renderAll();
+        }
       });
 
       el.btnNow.addEventListener('click', () => {
@@ -1644,7 +1675,11 @@
     function bindAuthAndCloud() {
       // 登录
       el.btnLogin.addEventListener('click', openLogin);
-      el.btnLogout.addEventListener('click', () => logout());
+      el.btnLogout.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        logout();
+      });
 
       el.btnCloseLogin.addEventListener('click', closeLogin);
       el.btnLoginCancel.addEventListener('click', closeLogin);
