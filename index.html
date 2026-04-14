@@ -413,7 +413,7 @@
     </div>
   </div>
 
-  <!-- 登录弹窗（邮箱验证码/魔法链接） -->
+  <!-- 登录弹窗（邮箱+密码） -->
   <div id="loginOverlay" class="hidden fixed inset-0 z-50">
     <div class="absolute inset-0 bg-slate-900/45"></div>
     <div class="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
@@ -421,7 +421,7 @@
         <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 class="text-base font-semibold">登录</h2>
-            <p class="text-xs text-slate-500 mt-0.5">输入邮箱获取验证码，填入后登录。</p>
+            <p class="text-xs text-slate-500 mt-0.5">邮箱+密码登录。没有账号可直接注册。</p>
           </div>
           <button id="btnCloseLogin" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -433,27 +433,68 @@
           <label class="text-xs font-medium text-slate-700">邮箱</label>
           <input id="loginEmail" type="email" placeholder="name@example.com"
             class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
-          <p id="loginHint" class="mt-2 text-xs text-slate-500">
-            提示：请到邮箱查收验证码。
-          </p>
-          <div id="otpBox" class="hidden mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-            <label class="text-xs font-medium text-slate-700">邮箱验证码</label>
-            <input id="loginOtp" inputmode="numeric" autocomplete="one-time-code" placeholder="从邮件中复制粘贴验证码"
+          <div id="passwordBox" class="mt-3">
+            <label class="text-xs font-medium text-slate-700">密码</label>
+            <input id="loginPassword" type="password" placeholder="请输入密码"
               class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
-            <p class="mt-2 text-xs text-slate-500">收不到验证码？请检查垃圾箱，或稍等 1-2 分钟再试。</p>
+            <p id="loginHint" class="mt-2 text-xs text-slate-500">忘记密码？点击下方“重置密码”发送邮件。</p>
           </div>
           <div class="mt-4 flex items-center justify-end gap-2">
             <button id="btnLoginCancel"
               class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
               取消
             </button>
-            <button id="btnSendLoginLink"
-              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 active:scale-[0.99] transition">
-              发送验证码
+            <button id="btnForgotPassword"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
+              重置密码
             </button>
-            <button id="btnVerifyOtp"
-              class="hidden rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white hover:bg-slate-800 active:scale-[0.99] transition">
-              验证并登录
+            <button id="btnAuthPrimary"
+              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 active:scale-[0.99] transition">
+              登录
+            </button>
+          </div>
+          <div class="mt-3 flex items-center justify-between text-sm">
+            <button id="btnAuthSwitch" type="button" class="text-primary-600 hover:text-primary-700 font-semibold">
+              没有账号？注册
+            </button>
+            <span id="authModeLabel" class="text-xs text-slate-500">当前：登录</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 重置密码（通过邮件进入 recovery 后设置新密码） -->
+  <div id="resetOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-900/45"></div>
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
+        <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold">设置新密码</h2>
+            <p class="text-xs text-slate-500 mt-0.5">请输入新密码完成重置。</p>
+          </div>
+          <button id="btnCloseReset" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="px-4 sm:px-5 py-4">
+          <label class="text-xs font-medium text-slate-700">新密码</label>
+          <input id="newPassword" type="password" placeholder="至少 6 位"
+            class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+          <label class="mt-3 block text-xs font-medium text-slate-700">确认新密码</label>
+          <input id="newPassword2" type="password" placeholder="再次输入"
+            class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <button id="btnResetCancel"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+              取消
+            </button>
+            <button id="btnResetConfirm"
+              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition">
+              确认重置
             </button>
           </div>
         </div>
@@ -622,12 +663,22 @@
       loginOverlay: $('#loginOverlay'),
       btnCloseLogin: $('#btnCloseLogin'),
       btnLoginCancel: $('#btnLoginCancel'),
-      btnSendLoginLink: $('#btnSendLoginLink'),
-      btnVerifyOtp: $('#btnVerifyOtp'),
+      btnAuthPrimary: $('#btnAuthPrimary'),
+      btnAuthSwitch: $('#btnAuthSwitch'),
+      btnForgotPassword: $('#btnForgotPassword'),
       loginEmail: $('#loginEmail'),
-      loginOtp: $('#loginOtp'),
-      otpBox: $('#otpBox'),
+      loginPassword: $('#loginPassword'),
+      passwordBox: $('#passwordBox'),
       loginHint: $('#loginHint'),
+      authModeLabel: $('#authModeLabel'),
+
+      // 重置密码
+      resetOverlay: $('#resetOverlay'),
+      btnCloseReset: $('#btnCloseReset'),
+      btnResetCancel: $('#btnResetCancel'),
+      btnResetConfirm: $('#btnResetConfirm'),
+      newPassword: $('#newPassword'),
+      newPassword2: $('#newPassword2'),
 
       // 云设置（上线版已隐藏，保留 DOM 引用不影响功能）
       cloudOverlay: $('#cloudOverlay'),
@@ -650,6 +701,7 @@
       userEmail: '',
       supabaseReady: false,
       dataMode: 'local', // 'local' | 'cloud'
+      authMode: 'signIn', // signIn | signUp | forgot
     };
 
     function uid() {
@@ -796,10 +848,17 @@
       updateAuthUI();
 
       // 监听登录状态变化：完成邮箱链接回跳时会触发
-      sb.auth.onAuthStateChange(async (_event, session) => {
+      sb.auth.onAuthStateChange(async (event, session) => {
         state.session = session ?? null;
         state.userEmail = session?.user?.email ?? '';
         updateAuthUI();
+
+        // 密码重置：用户点击邮件里的 recovery 链接，会触发 PASSWORD_RECOVERY
+        if (event === 'PASSWORD_RECOVERY') {
+          openResetOverlay();
+          return;
+        }
+
         if (state.session) {
           await cloudPullAllToState();
           // 登录后尝试同步离线队列
@@ -856,9 +915,8 @@
         return;
       }
       el.loginEmail.value = '';
-      el.loginOtp.value = '';
-      el.otpBox.classList.add('hidden');
-      el.btnVerifyOtp.classList.add('hidden');
+      el.loginPassword.value = '';
+      setAuthMode('signIn');
       openOverlay(el.loginOverlay);
       setTimeout(() => el.loginEmail.focus(), 50);
     }
@@ -872,57 +930,55 @@
     }
     function closeCloudSettings() { closeOverlay(el.cloudOverlay); }
 
-    async function sendLoginLink(email) {
-      // 这里仍使用 signInWithOtp 触发“发邮件”，但我们推荐用户用“验证码”完成登录（见 verifyOtp）
+    async function authSignUp(email, password) {
+      if (!sb) throw new Error('Supabase not initialized');
+      const { error } = await sb.auth.signUp({ email, password });
+      if (error) throw error;
+    }
+
+    async function authSignIn(email, password) {
+      if (!sb) throw new Error('Supabase not initialized');
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+    }
+
+    async function authSendResetEmail(email) {
       if (!sb) throw new Error('Supabase not initialized');
       const redirectTo = getRedirectUrlForEmailLink();
-
-      const { error } = await sb.auth.signInWithOtp({
-        email,
-        options: { emailRedirectTo: redirectTo }
-      });
+      const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo });
       if (error) throw error;
     }
 
-    async function verifyEmailOtp(email, token) {
+    async function authUpdatePassword(newPassword) {
       if (!sb) throw new Error('Supabase not initialized');
-      const { data, error } = await sb.auth.verifyOtp({
-        email,
-        token,
-        type: 'email'
-      });
+      const { error } = await sb.auth.updateUser({ password: newPassword });
       if (error) throw error;
-      return data;
     }
 
-    // 发送验证码冷却（60s）：避免触发 Supabase 邮件限流
-    let sendOtpCooldownTimer = null;
-    function stopSendOtpCooldown() {
-      if (sendOtpCooldownTimer) {
-        clearInterval(sendOtpCooldownTimer);
-        sendOtpCooldownTimer = null;
-      }
-      if (el.btnSendLoginLink) {
-        el.btnSendLoginLink.disabled = false;
-        el.btnSendLoginLink.classList.remove('opacity-60', 'cursor-not-allowed');
-        el.btnSendLoginLink.textContent = '发送验证码';
-      }
+    function setAuthMode(mode) {
+      state.authMode = mode;
+      const isSignUp = mode === 'signUp';
+      const isForgot = mode === 'forgot';
+
+      el.passwordBox.classList.toggle('hidden', isForgot);
+      el.btnForgotPassword.classList.toggle('hidden', isForgot);
+      el.btnAuthSwitch.textContent = isSignUp ? '已有账号？登录' : '没有账号？注册';
+      el.btnAuthPrimary.textContent = isForgot ? '发送重置邮件' : (isSignUp ? '注册' : '登录');
+      el.authModeLabel.textContent = isForgot ? '当前：重置密码' : (isSignUp ? '当前：注册' : '当前：登录');
+      el.loginHint.textContent = isForgot ? '提示：我们会发送一封重置密码邮件。' : '忘记密码？点击“重置密码”。';
     }
 
-    function startSendOtpCooldown(seconds) {
-      stopSendOtpCooldown();
-      let remain = Math.max(1, Number(seconds) || 60);
-      el.btnSendLoginLink.disabled = true;
-      el.btnSendLoginLink.classList.add('opacity-60', 'cursor-not-allowed');
-      el.btnSendLoginLink.textContent = `重新发送(${remain}s)`;
-      sendOtpCooldownTimer = setInterval(() => {
-        remain -= 1;
-        if (remain <= 0) {
-          stopSendOtpCooldown();
-          return;
-        }
-        el.btnSendLoginLink.textContent = `重新发送(${remain}s)`;
-      }, 1000);
+    function openResetOverlay() {
+      el.newPassword.value = '';
+      el.newPassword2.value = '';
+      el.resetOverlay.classList.remove('hidden');
+      lockBodyScroll(true);
+      setTimeout(() => el.newPassword.focus(), 50);
+    }
+
+    function closeResetOverlay() {
+      el.resetOverlay.classList.add('hidden');
+      lockBodyScroll(false);
     }
 
     async function logout() {
@@ -1746,37 +1802,63 @@
       el.btnLoginCancel.addEventListener('click', closeLogin);
       el.loginOverlay.addEventListener('click', (e) => { if (e.target === el.loginOverlay) closeLogin(); });
 
-      el.btnSendLoginLink.addEventListener('click', async () => {
-        // 60s 冷却：防止频繁触发邮件发送导致 rate limit
-        if (el.btnSendLoginLink.disabled) return;
-        const email = el.loginEmail.value.trim();
-        if (!email) { toast('请输入邮箱', 'error'); return; }
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('邮箱格式不正确', 'error'); return; }
-        try {
-          startSendOtpCooldown(60);
-          await sendLoginLink(email);
-          // 显示验证码输入框，用户可用手机/电脑打开邮箱获取验证码
-          el.otpBox.classList.remove('hidden');
-          el.btnVerifyOtp.classList.remove('hidden');
-          toast('验证码邮件已发送：请从邮件中复制验证码，回到这里粘贴并登录', 'success');
-          setTimeout(() => el.loginOtp.focus(), 50);
-        } catch (e) {
-          stopSendOtpCooldown();
-          toast('发送失败：' + (e?.message || '请稍后重试'), 'error');
-        }
+      el.btnAuthSwitch.addEventListener('click', () => {
+        if (state.authMode === 'signUp') setAuthMode('signIn');
+        else setAuthMode('signUp');
       });
 
-      el.btnVerifyOtp.addEventListener('click', async () => {
+      el.btnForgotPassword.addEventListener('click', () => {
+        setAuthMode('forgot');
+      });
+
+      el.btnAuthPrimary.addEventListener('click', async () => {
         const email = el.loginEmail.value.trim();
-        const token = (el.loginOtp.value || '').trim();
+        const password = el.loginPassword.value;
         if (!email) { toast('请输入邮箱', 'error'); return; }
-        if (!token) { toast('请输入邮箱验证码', 'error'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('邮箱格式不正确', 'error'); return; }
+
         try {
-          await verifyEmailOtp(email, token);
+          if (state.authMode === 'forgot') {
+            await authSendResetEmail(email);
+            toast('重置邮件已发送，请到邮箱继续操作', 'success');
+            closeLogin();
+            return;
+          }
+
+          if (!password || password.length < 6) { toast('密码至少 6 位', 'error'); return; }
+
+          if (state.authMode === 'signUp') {
+            await authSignUp(email, password);
+            toast('注册成功，请直接登录', 'success');
+            setAuthMode('signIn');
+            return;
+          }
+
+          await authSignIn(email, password);
           toast('登录成功', 'success');
           closeLogin();
         } catch (e) {
-          toast('验证码无效或已过期：' + (e?.message || '请重试'), 'error');
+          toast('操作失败：' + (e?.message || '请稍后重试'), 'error');
+        }
+      });
+
+      // 重置密码 overlay
+      el.btnCloseReset.addEventListener('click', closeResetOverlay);
+      el.btnResetCancel.addEventListener('click', closeResetOverlay);
+      el.resetOverlay.addEventListener('click', (e) => { if (e.target === el.resetOverlay) closeResetOverlay(); });
+      el.btnResetConfirm.addEventListener('click', async () => {
+        const p1 = el.newPassword.value || '';
+        const p2 = el.newPassword2.value || '';
+        if (p1.length < 6) { toast('新密码至少 6 位', 'error'); return; }
+        if (p1 !== p2) { toast('两次密码不一致', 'error'); return; }
+        try {
+          await authUpdatePassword(p1);
+          toast('密码已更新，请重新登录', 'success');
+          closeResetOverlay();
+          // 退出当前 recovery session，避免误用
+          await logout();
+        } catch (e2) {
+          toast('重置失败：' + (e2?.message || '请稍后重试'), 'error');
         }
       });
 
