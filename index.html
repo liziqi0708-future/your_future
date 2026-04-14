@@ -1,0 +1,1713 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#165DFF" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="实习投递记录" />
+  <title>实习投递记录（本地版）</title>
+
+  <!-- TailwindCSS v3 CDN：纯前端、零依赖安装，直接打开即可运行 -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Supabase JS SDK（用于登录与云端同步） -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <script>
+    // Tailwind 自定义主题（主色深蓝 #165DFF）
+    // 兼容：若 Tailwind CDN 加载失败，不应导致整页脚本中断
+    if (window.tailwind) {
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              primary: {
+                50: '#EEF4FF',
+                100: '#DCE8FF',
+                200: '#B8D1FF',
+                300: '#8AB1FF',
+                400: '#4F86FF',
+                500: '#165DFF',
+                600: '#0F4CE6',
+                700: '#0C3DB8',
+                800: '#0B3296',
+                900: '#092A7A'
+              }
+            },
+            boxShadow: {
+              soft: '0 10px 30px rgba(17, 24, 39, 0.08)',
+            }
+          }
+        }
+      };
+    }
+  </script>
+
+  <style>
+    html, body { height: 100%; }
+    body { -webkit-tap-highlight-color: transparent; }
+    input, textarea, select { font-size: 16px; }
+    .break-anywhere { overflow-wrap: anywhere; word-break: break-word; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+    .animate-fadeIn { animation: fadeIn .18s ease-out; }
+  </style>
+</head>
+
+<body class="bg-slate-50 text-slate-900 selection:bg-primary-100 selection:text-slate-900">
+  <!-- 顶部导航栏：应用名称 + 统计入口 -->
+  <header class="sticky top-0 z-30 bg-white/85 backdrop-blur border-b border-slate-200">
+    <div class="mx-auto max-w-5xl px-4 pt-[env(safe-area-inset-top)]">
+      <div class="h-14 flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="h-9 w-9 rounded-xl bg-primary-50 border border-primary-100 flex items-center justify-center shadow-sm">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-primary-600">
+              <path d="M8 7V6a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M6 7h12a2 2 0 0 1 2 2v9a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V9a2 2 0 0 1 2-2Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              <path d="M9 12h6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <div class="leading-tight">
+            <h1 class="text-base font-semibold tracking-tight">岗位投递记录</h1>
+            <p class="text-xs text-slate-500">登录后云端同步 · for your future</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- 登录状态 -->
+          <div class="hidden sm:flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <span class="h-2 w-2 rounded-full bg-slate-300" id="authDot"></span>
+            <span class="text-xs font-medium text-slate-700" id="authText">未登录</span>
+          </div>
+
+          <!-- 云设置：填入 Supabase URL/AnonKey -->
+          <button id="btnOpenCloudSettings"
+            class="hidden inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-slate-600">
+              <path d="M12 15.5a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Z" stroke="currentColor" stroke-width="2"/>
+              <path d="M19.4 15a1.8 1.8 0 0 0 .36 1.98l.03.03a2.2 2.2 0 0 1-1.56 3.76 2.2 2.2 0 0 1-1.56-.64l-.03-.03a1.8 1.8 0 0 0-1.98-.36 1.8 1.8 0 0 0-1.1 1.64V21a2.2 2.2 0 0 1-4.4 0v-.04A1.8 1.8 0 0 0 8 19.32a1.8 1.8 0 0 0-1.98.36l-.03.03a2.2 2.2 0 0 1-3.12 0 2.2 2.2 0 0 1 0-3.12l.03-.03A1.8 1.8 0 0 0 3.26 15a1.8 1.8 0 0 0-1.64-1.1H1.6a2.2 2.2 0 0 1 0-4.4h.04A1.8 1.8 0 0 0 3.28 8a1.8 1.8 0 0 0-.36-1.98l-.03-.03a2.2 2.2 0 0 1 3.12-3.12l.03.03A1.8 1.8 0 0 0 8 3.26a1.8 1.8 0 0 0 1.1-1.64V1.6a2.2 2.2 0 0 1 4.4 0v.04A1.8 1.8 0 0 0 15 3.28a1.8 1.8 0 0 0 1.98-.36l.03-.03a2.2 2.2 0 0 1 3.12 3.12l-.03.03A1.8 1.8 0 0 0 20.74 9a1.8 1.8 0 0 0 1.64 1.1h.04a2.2 2.2 0 0 1 0 4.4h-.04A1.8 1.8 0 0 0 19.4 15Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+            </svg>
+            云设置
+          </button>
+
+          <button id="btnLogin"
+            class="inline-flex items-center gap-2 rounded-xl bg-primary-500 px-3 py-2 text-sm font-semibold text-white shadow-sm hover:bg-primary-600 active:scale-[0.99] transition">
+            登录
+          </button>
+
+          <button id="btnLogout"
+            class="hidden inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition">
+            退出
+          </button>
+
+          <button id="btnOpenStats"
+            class="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm hover:bg-slate-50 active:scale-[0.99] transition">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" class="text-primary-600">
+              <path d="M4 19V5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M8 19v-6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M12 19v-10" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M16 19v-3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M20 19V8" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+            统计
+          </button>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主体：筛选栏 + 列表 -->
+  <main class="mx-auto max-w-5xl px-4 pb-24 pt-4">
+    <!-- 筛选与搜索 -->
+    <section class="bg-white rounded-2xl border border-slate-200 shadow-soft p-4">
+      <div class="flex flex-col gap-3">
+        <div class="flex items-center gap-2">
+          <div class="relative flex-1">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="2"/>
+              </svg>
+            </span>
+            <input id="inputSearch" type="search" placeholder="搜索公司 / 岗位（实时）"
+              class="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-10 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+            <button id="btnClearSearch" type="button" title="清空搜索"
+              class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </button>
+          </div>
+
+          <button id="btnResetFilters" type="button"
+            class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
+            重置
+          </button>
+        </div>
+
+        <!-- 状态筛选 Chips（移动端横滑） -->
+        <div class="flex items-center gap-2 overflow-x-auto pb-1 -mx-1 px-1">
+          <div id="statusChips" class="flex items-center gap-2"></div>
+        </div>
+
+        <div class="flex items-center justify-between gap-3 text-xs text-slate-500">
+          <p>
+            <span id="textResultCount" class="font-medium text-slate-700">0</span> 条记录
+            <span class="mx-1">·</span>
+            按投递时间倒序
+          </p>
+          <div class="flex items-center gap-2">
+            <button id="btnExport" class="rounded-lg px-2.5 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 transition text-slate-700">
+              导出
+            </button>
+            <button id="btnImport" class="rounded-lg px-2.5 py-1.5 border border-slate-200 bg-white hover:bg-slate-50 transition text-slate-700">
+              导入
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 列表 -->
+    <section class="mt-4">
+      <div id="list" class="grid grid-cols-1 gap-3"></div>
+
+      <!-- 空状态 -->
+      <div id="emptyState" class="hidden mt-10 text-center">
+        <div class="mx-auto w-full max-w-sm rounded-2xl border border-dashed border-slate-300 bg-white p-6">
+          <div class="mx-auto h-12 w-12 rounded-2xl bg-primary-50 flex items-center justify-center border border-primary-100">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" class="text-primary-600">
+              <path d="M12 6v12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              <path d="M6 12h12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h3 class="mt-3 text-sm font-semibold text-slate-900">还没有记录</h3>
+          <p class="mt-1 text-sm text-slate-500">点击右下角按钮，新增第一条实习投递信息。</p>
+        </div>
+      </div>
+
+      <div id="loadMoreHint" class="hidden mt-4 text-center text-xs text-slate-500">
+        下拉/滚动继续加载…
+      </div>
+    </section>
+  </main>
+
+  <!-- 底部固定悬浮按钮：一键新增 -->
+  <button id="btnAdd"
+    class="fixed right-4 bottom-5 z-40 h-14 w-14 rounded-2xl bg-primary-500 text-white shadow-lg hover:bg-primary-600 active:scale-[0.98] transition flex items-center justify-center"
+    aria-label="新增投递记录" title="新增投递记录">
+    <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+      <path d="M12 5v14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+      <path d="M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </svg>
+  </button>
+
+  <!-- 新增/编辑弹窗 -->
+  <div id="modalOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-900/45"></div>
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="w-full max-w-xl rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
+        <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 id="modalTitle" class="text-base font-semibold">新增投递</h2>
+            <p class="text-xs text-slate-500 mt-0.5">必填项已标注，保存后自动本地永久存储。</p>
+          </div>
+          <button id="btnCloseModal" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <form id="form" class="px-4 sm:px-5 py-4">
+          <input id="fieldId" type="hidden" />
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label class="text-xs font-medium text-slate-700">公司名称 <span class="text-rose-600">*</span></label>
+              <input id="fieldCompany" type="text" maxlength="50" placeholder="如：字节跳动"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+              <p id="errCompany" class="hidden mt-1 text-xs text-rose-600">请输入公司名称</p>
+            </div>
+
+            <div>
+              <label class="text-xs font-medium text-slate-700">岗位名称 <span class="text-rose-600">*</span></label>
+              <input id="fieldPosition" type="text" maxlength="60" placeholder="如：前端开发实习生"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+              <p id="errPosition" class="hidden mt-1 text-xs text-rose-600">请输入岗位名称</p>
+            </div>
+
+            <div>
+              <label class="text-xs font-medium text-slate-700">投递时间</label>
+              <input id="fieldAppliedAt" type="datetime-local"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+              <p class="mt-1 text-xs text-slate-500">默认当前时间，可手动修改。</p>
+            </div>
+
+            <div>
+              <label class="text-xs font-medium text-slate-700">投递进度</label>
+              <select id="fieldStatus"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition"></select>
+              <p class="mt-1 text-xs text-slate-500">支持在列表中一键切换。</p>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-xs font-medium text-slate-700">岗位链接</label>
+              <input id="fieldLink" type="url" placeholder="如：https://xxx.com/job/123（可留空）"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+              <p id="errLink" class="hidden mt-1 text-xs text-rose-600">链接格式无效，请检查（支持自动补全 https://）</p>
+            </div>
+
+            <div class="sm:col-span-2">
+              <label class="text-xs font-medium text-slate-700">备注</label>
+              <textarea id="fieldNote" rows="3" maxlength="500" placeholder="如：内推人/进展/面试安排等（可留空）"
+                class="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition"></textarea>
+              <div class="mt-1 flex items-center justify-between text-xs text-slate-500">
+                <span>建议记录关键信息，方便复盘。</span>
+                <span><span id="noteCount">0</span>/500</span>
+              </div>
+            </div>
+
+            <div>
+              <label class="text-xs font-medium text-slate-700">截止日期</label>
+              <input id="fieldDeadline" type="date"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+              <p class="mt-1 text-xs text-slate-500">可用于提醒自己岗位截止时间。</p>
+            </div>
+
+            <div>
+              <label class="text-xs font-medium text-slate-700">快捷操作</label>
+              <div class="mt-1 flex gap-2">
+                <button id="btnNow" type="button"
+                  class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
+                  设为当前时间
+                </button>
+                <button id="btnClearDeadline" type="button"
+                  class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
+                  清空截止日
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <button id="btnCancel" type="button"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
+              取消
+            </button>
+            <button id="btnSave" type="submit"
+              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-600 active:scale-[0.99] transition">
+              保存
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- 统计面板 -->
+  <div id="statsOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-900/45"></div>
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="w-full max-w-xl rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
+        <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold">统计面板</h2>
+            <p class="text-xs text-slate-500 mt-0.5">直观查看各状态数量，随数据实时更新。</p>
+          </div>
+          <button id="btnCloseStats" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="px-4 sm:px-5 py-4">
+          <div id="statsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-3"></div>
+
+          <div class="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-4">
+            <div class="flex items-start gap-3">
+              <div class="mt-0.5 h-9 w-9 rounded-xl bg-white border border-slate-200 flex items-center justify-center text-slate-600">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+                  <path d="M12 22a10 10 0 1 1 0-20 10 10 0 0 1 0 20Z" stroke="currentColor" stroke-width="2"/>
+                  <path d="M12 8v5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M12 16h.01" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+                </svg>
+              </div>
+              <div>
+                <p class="text-sm font-semibold text-slate-900">小提示</p>
+                <p class="text-sm text-slate-600 mt-1">
+                  你可以在列表卡片里直接切换进度、编辑或删除。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 flex justify-end">
+            <button id="btnStatsOk"
+              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 active:scale-[0.99] transition">
+              知道了
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 删除二次确认 -->
+  <div id="confirmOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-900/45"></div>
+    <div class="absolute inset-0 flex items-center justify-center p-4">
+      <div class="w-full max-w-sm rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
+        <div class="p-4 border-b border-slate-200">
+          <h3 class="text-base font-semibold">确认删除？</h3>
+          <p id="confirmText" class="text-sm text-slate-600 mt-1">此操作不可撤销，请谨慎。</p>
+        </div>
+        <div class="p-4 flex items-center justify-end gap-2">
+          <button id="btnConfirmCancel"
+            class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+            取消
+          </button>
+          <button id="btnConfirmOk"
+            class="rounded-xl bg-rose-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-rose-700 transition">
+            删除
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast -->
+  <div id="toastHost" class="fixed left-1/2 -translate-x-1/2 bottom-5 z-[60] w-[calc(100%-2rem)] max-w-md pointer-events-none"></div>
+
+  <!-- 导入弹窗（粘贴 JSON） -->
+  <div id="importOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-900/45"></div>
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="w-full max-w-xl rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
+        <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold">导入数据</h2>
+            <p class="text-xs text-slate-500 mt-0.5">粘贴你导出的 JSON。导入会合并（按 id 去重）。</p>
+          </div>
+          <button id="btnCloseImport" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="px-4 sm:px-5 py-4">
+          <textarea id="importTextarea" rows="8" placeholder='粘贴 JSON，例如：[{ "id": "...", "company": "...", ... }]'
+            class="w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition"></textarea>
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <button id="btnImportCancel"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+              取消
+            </button>
+            <button id="btnImportDo"
+              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 transition">
+              导入
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 登录弹窗（邮箱验证码/魔法链接） -->
+  <div id="loginOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-900/45"></div>
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="w-full max-w-md rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
+        <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold">登录</h2>
+            <p class="text-xs text-slate-500 mt-0.5">输入邮箱，我们会发送一次性登录链接到你的邮箱。</p>
+          </div>
+          <button id="btnCloseLogin" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="px-4 sm:px-5 py-4">
+          <label class="text-xs font-medium text-slate-700">邮箱</label>
+          <input id="loginEmail" type="email" placeholder="name@example.com"
+            class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+          <p id="loginHint" class="mt-2 text-xs text-slate-500">
+            提示：请使用可正常收邮件的邮箱。打开邮件里的链接后会自动回到本页面完成登录。
+          </p>
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <button id="btnLoginCancel"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+              取消
+            </button>
+            <button id="btnSendLoginLink"
+              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 active:scale-[0.99] transition">
+              发送登录链接
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 云设置弹窗（Supabase URL / anon key） -->
+  <div id="cloudOverlay" class="hidden fixed inset-0 z-50">
+    <div class="absolute inset-0 bg-slate-900/45"></div>
+    <div class="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
+      <div class="w-full max-w-xl rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
+        <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold">云设置（Supabase）</h2>
+            <p class="text-xs text-slate-500 mt-0.5">用于登录与多设备同步。`anon key` 是公开客户端密钥，可写在前端。</p>
+          </div>
+          <button id="btnCloseCloud" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+        <div class="px-4 sm:px-5 py-4">
+          <div class="grid grid-cols-1 gap-3">
+            <div>
+              <label class="text-xs font-medium text-slate-700">SUPABASE_URL</label>
+              <input id="supabaseUrl" type="url" placeholder="https://xxxx.supabase.co"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-700">站点回跳地址（Site URL）</label>
+              <input id="siteUrl" type="url" placeholder="https://你的GiteePages域名/（推荐）"
+                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
+              <p class="mt-1 text-xs text-slate-500">
+                必填：邮箱登录链接点开后会跳回这里。不要用 localhost/127.0.0.1（手机点开会跳到手机自己的本机）。
+              </p>
+            </div>
+            <div>
+              <label class="text-xs font-medium text-slate-700">SUPABASE_ANON_KEY</label>
+              <textarea id="supabaseAnonKey" rows="4" placeholder="eyJhbGciOi..."
+                class="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition"></textarea>
+              <p class="mt-1 text-xs text-slate-500">在 Supabase 项目 Settings → API 中获取。</p>
+            </div>
+          </div>
+          <div class="mt-4 flex items-center justify-end gap-2">
+            <button id="btnCloudCancel"
+              class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 transition">
+              取消
+            </button>
+            <button id="btnCloudSave"
+              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white hover:bg-primary-600 active:scale-[0.99] transition">
+              保存
+            </button>
+          </div>
+          <div class="mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600 leading-relaxed">
+            <p class="font-semibold text-slate-900">你需要在 Supabase 建表并开启 RLS</p>
+            <p class="mt-1">具体 SQL 我已写在本项目 `README.md` 中，复制到 Supabase 的 SQL Editor 执行即可。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /**
+     * 实习投递记录 Web App（纯前端 / localStorage）
+     * - 新增/编辑/删除/筛选/搜索/进度切换/统计/链接校验/复制
+     * - 数据仅存 localStorage：无需后端
+     * - 分页渲染：滚动加载避免卡顿
+     */
+
+    // 本地数据 key：未登录或离线队列时使用
+    const STORAGE_KEY_LOCAL = 'intern_applications_local_v2';
+    const STORAGE_KEY_SYNC_QUEUE = 'intern_applications_sync_queue_v1';
+    // 上线版：Supabase 配置写死（普通用户无需配置）
+    const SUPABASE_URL = 'https://eqtpjbyyabmavtjhgbqf.supabase.co';
+    const SUPABASE_ANON_KEY = 'sb_publishable_25RkAhRa06WGrPnyfJmvZQ_ZCci6e3R';
+
+    // 云端表名（Supabase）
+    const CLOUD_TABLE = 'applications';
+
+    const STATUS = {
+      ALL: 'all',
+      TODO: 'todo',
+      APPLIED: 'applied',
+      TEST: 'test',
+      INTERVIEW: 'interview',
+      OFFER: 'offer',
+      REJECTED: 'rejected'
+    };
+    const STATUS_ORDER = [STATUS.TODO, STATUS.APPLIED, STATUS.TEST, STATUS.INTERVIEW, STATUS.OFFER, STATUS.REJECTED];
+    const STATUS_META = {
+      [STATUS.TODO]:      { label: '待投递',    badge: 'bg-slate-100 text-slate-700 border-slate-200', dot: 'bg-slate-400' },
+      [STATUS.APPLIED]:   { label: '已投递',    badge: 'bg-primary-50 text-primary-700 border-primary-200', dot: 'bg-primary-500' },
+      [STATUS.TEST]:      { label: '笔试中',    badge: 'bg-orange-50 text-orange-700 border-orange-200', dot: 'bg-orange-500' },
+      [STATUS.INTERVIEW]: { label: '面试中',    badge: 'bg-purple-50 text-purple-700 border-purple-200', dot: 'bg-purple-500' },
+      [STATUS.OFFER]:     { label: '已 offer',  badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
+      [STATUS.REJECTED]:  { label: '已拒绝',    badge: 'bg-rose-50 text-rose-700 border-rose-200', dot: 'bg-rose-500' },
+    };
+
+    const $ = (sel) => document.querySelector(sel);
+
+    const el = {
+      btnOpenStats: $('#btnOpenStats'),
+      btnOpenCloudSettings: $('#btnOpenCloudSettings'),
+      btnLogin: $('#btnLogin'),
+      btnLogout: $('#btnLogout'),
+      authDot: $('#authDot'),
+      authText: $('#authText'),
+      statusChips: $('#statusChips'),
+      inputSearch: $('#inputSearch'),
+      btnClearSearch: $('#btnClearSearch'),
+      btnResetFilters: $('#btnResetFilters'),
+      textResultCount: $('#textResultCount'),
+      btnExport: $('#btnExport'),
+      btnImport: $('#btnImport'),
+
+      list: $('#list'),
+      emptyState: $('#emptyState'),
+      loadMoreHint: $('#loadMoreHint'),
+
+      btnAdd: $('#btnAdd'),
+
+      modalOverlay: $('#modalOverlay'),
+      modalTitle: $('#modalTitle'),
+      btnCloseModal: $('#btnCloseModal'),
+      btnCancel: $('#btnCancel'),
+      form: $('#form'),
+
+      fieldId: $('#fieldId'),
+      fieldCompany: $('#fieldCompany'),
+      fieldPosition: $('#fieldPosition'),
+      fieldAppliedAt: $('#fieldAppliedAt'),
+      fieldStatus: $('#fieldStatus'),
+      fieldLink: $('#fieldLink'),
+      fieldNote: $('#fieldNote'),
+      fieldDeadline: $('#fieldDeadline'),
+      btnNow: $('#btnNow'),
+      btnClearDeadline: $('#btnClearDeadline'),
+      noteCount: $('#noteCount'),
+
+      errCompany: $('#errCompany'),
+      errPosition: $('#errPosition'),
+      errLink: $('#errLink'),
+
+      statsOverlay: $('#statsOverlay'),
+      btnCloseStats: $('#btnCloseStats'),
+      btnStatsOk: $('#btnStatsOk'),
+      statsGrid: $('#statsGrid'),
+
+      confirmOverlay: $('#confirmOverlay'),
+      confirmText: $('#confirmText'),
+      btnConfirmCancel: $('#btnConfirmCancel'),
+      btnConfirmOk: $('#btnConfirmOk'),
+
+      toastHost: $('#toastHost'),
+
+      importOverlay: $('#importOverlay'),
+      btnCloseImport: $('#btnCloseImport'),
+      btnImportCancel: $('#btnImportCancel'),
+      btnImportDo: $('#btnImportDo'),
+      importTextarea: $('#importTextarea'),
+
+      // 登录
+      loginOverlay: $('#loginOverlay'),
+      btnCloseLogin: $('#btnCloseLogin'),
+      btnLoginCancel: $('#btnLoginCancel'),
+      btnSendLoginLink: $('#btnSendLoginLink'),
+      loginEmail: $('#loginEmail'),
+      loginHint: $('#loginHint'),
+
+      // 云设置（上线版已隐藏，保留 DOM 引用不影响功能）
+      cloudOverlay: $('#cloudOverlay'),
+      btnCloseCloud: $('#btnCloseCloud'),
+      btnCloudCancel: $('#btnCloudCancel'),
+      btnCloudSave: $('#btnCloudSave'),
+      supabaseUrl: $('#supabaseUrl'),
+      siteUrl: $('#siteUrl'),
+      supabaseAnonKey: $('#supabaseAnonKey'),
+    };
+
+    const state = {
+      records: [],
+      filterStatus: STATUS.ALL,
+      keyword: '',
+      pageSize: 20,
+      renderCount: 20,
+      // 认证与云端
+      session: null,
+      userEmail: '',
+      supabaseReady: false,
+      dataMode: 'local', // 'local' | 'cloud'
+    };
+
+    function uid() {
+      return 'r_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+    }
+
+    function uuidv4() {
+      // 浏览器优先使用 crypto.randomUUID；否则退化为随机（仅用于本地，云端建议有 crypto）
+      if (crypto?.randomUUID) return crypto.randomUUID();
+      const s4 = () => Math.floor((1 + Math.random()) * 0x10000).toString(16).slice(1);
+      return `${s4()}${s4()}-${s4()}-${s4()}-${s4()}-${s4()}${s4()}${s4()}`;
+    }
+
+    function toDateTimeLocalValue(d) {
+      const pad = (n) => String(n).padStart(2, '0');
+      const yyyy = d.getFullYear();
+      const mm = pad(d.getMonth() + 1);
+      const dd = pad(d.getDate());
+      const hh = pad(d.getHours());
+      const mi = pad(d.getMinutes());
+      return `${yyyy}-${mm}-${dd}T${hh}:${mi}`;
+    }
+
+    function formatDateTime(isoOrLocal) {
+      if (!isoOrLocal) return '-';
+      const d = new Date(isoOrLocal);
+      if (Number.isNaN(d.getTime())) return '-';
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+    }
+
+    function formatDate(isoOrLocal) {
+      if (!isoOrLocal) return '-';
+      const d = new Date(isoOrLocal);
+      if (Number.isNaN(d.getTime())) return '-';
+      const pad = (n) => String(n).padStart(2, '0');
+      return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+    }
+
+    function escapeHtml(str) {
+      // 兼容性：不用 replaceAll，避免部分旧内核直接报错导致脚本中断
+      return String(str ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    function toast(message, type = 'info') {
+      const color =
+        type === 'success' ? 'border-emerald-200 bg-emerald-50 text-emerald-800' :
+        type === 'error' ? 'border-rose-200 bg-rose-50 text-rose-800' :
+        'border-slate-200 bg-white text-slate-800';
+
+      const node = document.createElement('div');
+      node.className = `pointer-events-auto mb-2 rounded-2xl border px-4 py-3 shadow-soft ${color} animate-fadeIn`;
+      node.innerHTML = `
+        <div class="flex items-start gap-3">
+          <div class="mt-0.5 h-2.5 w-2.5 rounded-full ${type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-rose-500' : 'bg-primary-500'}"></div>
+          <div class="text-sm font-medium break-anywhere">${escapeHtml(message)}</div>
+        </div>
+      `;
+      el.toastHost.appendChild(node);
+      setTimeout(() => {
+        node.style.opacity = '0';
+        node.style.transform = 'translateY(4px)';
+        node.style.transition = 'opacity .18s ease, transform .18s ease';
+        setTimeout(() => node.remove(), 200);
+      }, 2200);
+    }
+
+    function loadRecords() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_LOCAL);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        if (!Array.isArray(arr)) return [];
+        return arr
+          .filter(x => x && typeof x === 'object')
+          .map(x => ({
+            id: String(x.id ?? uid()),
+            company: String(x.company ?? '').trim(),
+            position: String(x.position ?? '').trim(),
+            appliedAt: String(x.appliedAt ?? ''),
+            status: STATUS_META[x.status] ? x.status : STATUS.TODO,
+            link: String(x.link ?? '').trim(),
+            note: String(x.note ?? '').trim(),
+            deadline: String(x.deadline ?? '').trim()
+          }));
+      } catch {
+        return [];
+      }
+    }
+
+    function saveRecords(records) {
+      localStorage.setItem(STORAGE_KEY_LOCAL, JSON.stringify(records));
+    }
+
+    /* =========================
+      Supabase：配置 / 登录 / 会话
+      - 这里使用“邮箱登录链接(OTP/Magic Link)”实现跨设备登录
+      - `anon key` 是公开密钥；真正的权限控制靠数据库 RLS
+    ========================== */
+
+    function getRedirectUrlForEmailLink() {
+      // 上线版：回跳到当前站点当前页面（必须是公网 http(s)）
+      try {
+        const u = new URL(window.location.href);
+        u.hash = '';
+        return u.toString();
+      } catch {
+        return window.location.href;
+      }
+    }
+
+    // 注意：supabase-js 会在全局暴露 window.supabase（命名空间），
+    // 这里的客户端实例不要再叫 supabase，避免重复声明导致脚本中断。
+    let sb = null;
+
+    async function initSupabaseIfPossible() {
+      if (!window.supabase?.createClient) {
+        toast('Supabase SDK 加载失败，请检查网络或稍后重试', 'error');
+        state.supabaseReady = false;
+        sb = null;
+        updateAuthUI();
+        return;
+      }
+
+      sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true
+        }
+      });
+
+      state.supabaseReady = true;
+
+      // 读取当前会话并刷新 UI/数据
+      const { data } = await sb.auth.getSession();
+      state.session = data?.session ?? null;
+      state.userEmail = state.session?.user?.email ?? '';
+      updateAuthUI();
+
+      // 监听登录状态变化：完成邮箱链接回跳时会触发
+      sb.auth.onAuthStateChange(async (_event, session) => {
+        state.session = session ?? null;
+        state.userEmail = session?.user?.email ?? '';
+        updateAuthUI();
+        if (state.session) {
+          await cloudPullAllToState();
+          // 登录后尝试同步离线队列
+          await syncQueueFlush();
+        } else {
+          // 退出后回到本地数据
+          state.dataMode = 'local';
+          state.records = loadRecords();
+          state.renderCount = state.pageSize;
+          renderAll();
+        }
+      });
+
+      // 如果已经登录，优先拉云端数据
+      if (state.session) {
+        await cloudPullAllToState();
+        await syncQueueFlush();
+      } else {
+        state.dataMode = 'local';
+        state.records = loadRecords();
+      }
+    }
+
+    function updateAuthUI() {
+      const loggedIn = !!state.session;
+      const ready = state.supabaseReady;
+
+      // 桌面端小状态条
+      if (el.authDot && el.authText) {
+        el.authDot.className = 'h-2 w-2 rounded-full ' + (loggedIn ? 'bg-emerald-500' : ready ? 'bg-slate-300' : 'bg-orange-400');
+        el.authText.textContent = loggedIn ? (state.userEmail || '已登录') : (ready ? '未登录' : '未配置云端');
+      }
+
+      // 按钮显示
+      el.btnLogin.classList.toggle('hidden', loggedIn);
+      el.btnLogout.classList.toggle('hidden', !loggedIn);
+
+      // 新增按钮：未登录也允许（本地模式）
+    }
+
+    function openOverlay(node) {
+      node.classList.remove('hidden');
+      lockBodyScroll(true);
+    }
+    function closeOverlay(node) {
+      node.classList.add('hidden');
+      lockBodyScroll(false);
+    }
+
+    function openLogin() {
+      if (!state.supabaseReady) {
+        toast('请先在「云设置」里填入 Supabase URL 与 anon key', 'error');
+        openCloudSettings();
+        return;
+      }
+      el.loginEmail.value = '';
+      openOverlay(el.loginOverlay);
+      setTimeout(() => el.loginEmail.focus(), 50);
+    }
+    function closeLogin() { closeOverlay(el.loginOverlay); }
+
+    function openCloudSettings() {
+      toast('上线版已内置云配置，无需手动设置', 'info');
+    }
+    function closeCloudSettings() { closeOverlay(el.cloudOverlay); }
+
+    async function sendLoginLink(email) {
+      if (!sb) throw new Error('Supabase not initialized');
+      const redirectTo = getRedirectUrlForEmailLink();
+
+      const { error } = await sb.auth.signInWithOtp({
+        email,
+        options: { emailRedirectTo: redirectTo }
+      });
+      if (error) throw error;
+    }
+
+    async function logout() {
+      if (!sb) return;
+      const { error } = await sb.auth.signOut();
+      if (error) toast('退出失败：' + error.message, 'error');
+      else toast('已退出登录', 'success');
+    }
+
+    /* =========================
+      云端 CRUD + 离线队列（最小可用同步）
+    ========================== */
+
+    function isCloudUsable() {
+      return !!(sb && state.supabaseReady && state.session?.user?.id);
+    }
+
+    function getUserId() {
+      return state.session?.user?.id || '';
+    }
+
+    function loadSyncQueue() {
+      try {
+        const raw = localStorage.getItem(STORAGE_KEY_SYNC_QUEUE);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveSyncQueue(queue) {
+      localStorage.setItem(STORAGE_KEY_SYNC_QUEUE, JSON.stringify(queue));
+    }
+
+    function queuePush(item) {
+      const q = loadSyncQueue();
+      q.push({ ...item, queuedAt: Date.now(), userId: getUserId() });
+      saveSyncQueue(q);
+    }
+
+    async function syncQueueFlush() {
+      if (!isCloudUsable()) return;
+      if (!navigator.onLine) return;
+
+      const uid = getUserId();
+      const q = loadSyncQueue();
+      const mine = q.filter(x => x && x.userId === uid);
+      const rest = q.filter(x => !x || x.userId !== uid);
+
+      if (mine.length === 0) return;
+
+      // 顺序执行，失败则停止（避免无限循环）
+      const stillPending = [];
+      for (const item of mine) {
+        try {
+          if (item.type === 'upsert') await cloudUpsert(item.record, { silent: true });
+          else if (item.type === 'delete') await cloudDelete(item.id, { silent: true });
+          else if (item.type === 'status') await cloudUpdateStatus(item.id, item.status, { silent: true });
+        } catch {
+          stillPending.push(item);
+          break;
+        }
+      }
+
+      saveSyncQueue([...rest, ...stillPending]);
+      if (stillPending.length === 0) toast('离线操作已自动同步', 'success');
+    }
+
+    async function cloudPullAllToState() {
+      if (!isCloudUsable()) return;
+      const { data, error } = await sb
+        .from(CLOUD_TABLE)
+        .select('*')
+        .order('applied_at', { ascending: false });
+      if (error) {
+        toast('云端拉取失败：' + error.message, 'error');
+        return;
+      }
+
+      state.dataMode = 'cloud';
+      state.records = (data || []).map(row => ({
+        id: row.id,
+        company: row.company || '',
+        position: row.position || '',
+        appliedAt: row.applied_at || '',
+        status: STATUS_META[row.status] ? row.status : STATUS.TODO,
+        link: row.link || '',
+        note: row.note || '',
+        // deadline 在 DB 是 date（YYYY-MM-DD），这里转成本地可展示的 ISO
+        deadline: row.deadline ? new Date(row.deadline + 'T00:00:00').toISOString() : ''
+      }));
+      state.renderCount = state.pageSize;
+      renderAll();
+      toast('云端数据已加载（多设备同步已开启）', 'success');
+    }
+
+    async function cloudUpsert(record, { silent } = {}) {
+      if (!isCloudUsable()) throw new Error('Cloud not usable');
+      const user_id = getUserId();
+
+      const payload = {
+        // id：新增时可不传，让数据库生成；编辑时必传
+        ...(record.id ? { id: record.id } : {}),
+        user_id,
+        company: record.company,
+        position: record.position,
+        applied_at: record.appliedAt,
+        status: record.status,
+        link: record.link || null,
+        note: record.note || null,
+        deadline: record.deadline ? formatDate(record.deadline) : null,
+      };
+
+      const { data, error } = await sb
+        .from(CLOUD_TABLE)
+        .upsert(payload, { onConflict: 'id' })
+        .select('*')
+        .single();
+
+      if (error) throw error;
+
+      if (!silent) toast('已同步到云端', 'success');
+      return data;
+    }
+
+    async function cloudDelete(id, { silent } = {}) {
+      if (!isCloudUsable()) throw new Error('Cloud not usable');
+      const { error } = await sb.from(CLOUD_TABLE).delete().eq('id', id);
+      if (error) throw error;
+      if (!silent) toast('已从云端删除', 'success');
+    }
+
+    async function cloudUpdateStatus(id, status, { silent } = {}) {
+      if (!isCloudUsable()) throw new Error('Cloud not usable');
+      const { error } = await sb.from(CLOUD_TABLE).update({ status }).eq('id', id);
+      if (error) throw error;
+      if (!silent) toast('已同步进度', 'success');
+    }
+
+    function normalizeUrlMaybe(input) {
+      const raw = String(input ?? '').trim();
+      if (!raw) return { ok: true, url: '' };
+      // 协议检测：例如 http:// https://
+      const hasProtocol = /^[a-zA-Z][a-zA-Z\d+\-.]*:\/\//.test(raw);
+      const candidate = hasProtocol ? raw : `https://${raw}`;
+      try {
+        const u = new URL(candidate);
+        if (!['http:', 'https:'].includes(u.protocol)) return { ok: false, url: '' };
+        return { ok: true, url: u.toString() };
+      } catch {
+        return { ok: false, url: '' };
+      }
+    }
+
+    async function copyText(text) {
+      try {
+        await navigator.clipboard.writeText(text);
+        return true;
+      } catch {
+        try {
+          const ta = document.createElement('textarea');
+          ta.value = text;
+          ta.style.position = 'fixed';
+          ta.style.opacity = '0';
+          document.body.appendChild(ta);
+          ta.select();
+          const ok = document.execCommand('copy');
+          ta.remove();
+          return ok;
+        } catch {
+          return false;
+        }
+      }
+    }
+
+    function sortByAppliedAtDesc(arr) {
+      return arr.slice().sort((a, b) => {
+        const ta = new Date(a.appliedAt).getTime();
+        const tb = new Date(b.appliedAt).getTime();
+        if (Number.isNaN(ta) && Number.isNaN(tb)) return 0;
+        if (Number.isNaN(ta)) return 1;
+        if (Number.isNaN(tb)) return -1;
+        return tb - ta;
+      });
+    }
+
+    function computeStats(records) {
+      const counts = Object.fromEntries(STATUS_ORDER.map(s => [s, 0]));
+      for (const r of records) {
+        if (counts[r.status] != null) counts[r.status] += 1;
+      }
+      return counts;
+    }
+
+    function renderStatusChips() {
+      const chips = [{ key: STATUS.ALL, label: '全部' }, ...STATUS_ORDER.map(s => ({ key: s, label: STATUS_META[s].label }))];
+      el.statusChips.innerHTML = chips.map(item => {
+        const active = state.filterStatus === item.key;
+        return `
+          <button data-chip="${item.key}"
+            class="${active ? 'bg-primary-500 text-white border-primary-500' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'} whitespace-nowrap rounded-xl border px-3 py-2 text-sm font-medium transition active:scale-[0.99]">
+            ${escapeHtml(item.label)}
+          </button>
+        `;
+      }).join('');
+    }
+
+    function getFilteredRecords() {
+      const kw = state.keyword.trim().toLowerCase();
+      let arr = state.records;
+      if (state.filterStatus !== STATUS.ALL) arr = arr.filter(r => r.status === state.filterStatus);
+      if (kw) {
+        arr = arr.filter(r => r.company.toLowerCase().includes(kw) || r.position.toLowerCase().includes(kw));
+      }
+      return sortByAppliedAtDesc(arr);
+    }
+
+    function statusSelectHtml(current) {
+      return `
+        <select data-action="statusSelect"
+          class="rounded-lg border border-slate-200 bg-white px-2 py-1.5 text-xs font-medium text-slate-700 focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition">
+          ${STATUS_ORDER.map(s => `<option value="${s}" ${s === current ? 'selected' : ''}>${escapeHtml(STATUS_META[s].label)}</option>`).join('')}
+        </select>
+      `;
+    }
+
+    function renderList() {
+      const filtered = getFilteredRecords();
+      el.textResultCount.textContent = filtered.length;
+      const toRender = filtered.slice(0, state.renderCount);
+      el.emptyState.classList.toggle('hidden', filtered.length !== 0);
+      el.loadMoreHint.classList.toggle('hidden', filtered.length <= state.renderCount);
+
+      el.list.innerHTML = toRender.map(r => {
+        const meta = STATUS_META[r.status];
+        const linkNorm = normalizeUrlMaybe(r.link);
+        const hasLink = !!(r.link && linkNorm.ok);
+        const displayLink = hasLink ? linkNorm.url : (r.link ? r.link : '');
+
+        return `
+          <article class="bg-white rounded-2xl border border-slate-200 shadow-soft p-4">
+            <div class="flex items-start justify-between gap-3">
+              <div class="min-w-0">
+                <div class="flex items-center gap-2">
+                  <span class="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}">
+                    <span class="h-1.5 w-1.5 rounded-full ${meta.dot}"></span>
+                    ${escapeHtml(meta.label)}
+                  </span>
+                  <span class="text-xs text-slate-500">投递：${escapeHtml(formatDateTime(r.appliedAt))}</span>
+                </div>
+
+                <h3 class="mt-2 text-base font-semibold text-slate-900 break-anywhere">${escapeHtml(r.company)}</h3>
+                <p class="mt-1 text-sm text-slate-700 break-anywhere">${escapeHtml(r.position)}</p>
+
+                <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div class="text-slate-500">截止日期</div>
+                    <div class="mt-1 font-medium text-slate-800">${escapeHtml(r.deadline ? formatDate(r.deadline) : '未设置')}</div>
+                  </div>
+                  <div class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
+                    <div class="text-slate-500">进度切换</div>
+                    <div class="mt-1">${statusSelectHtml(r.status)}</div>
+                  </div>
+                </div>
+
+                ${r.note ? `
+                  <div class="mt-3 rounded-xl border border-slate-200 bg-white px-3 py-2">
+                    <div class="text-xs text-slate-500">备注</div>
+                    <div class="mt-1 text-sm text-slate-700 break-anywhere">${escapeHtml(r.note)}</div>
+                  </div>
+                ` : ''}
+
+                <div class="mt-3">
+                  <div class="text-xs text-slate-500">岗位链接</div>
+                  <div class="mt-1 flex flex-wrap items-center gap-2">
+                    ${displayLink ? `
+                      <span class="text-xs ${hasLink ? 'text-primary-700' : 'text-rose-700'} break-anywhere">${escapeHtml(displayLink)}</span>
+                    ` : `<span class="text-xs text-slate-400">未填写</span>`}
+
+                    ${displayLink ? `
+                      <button data-action="copyLink"
+                        class="rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition">
+                        复制
+                      </button>
+                      <button data-action="openLink" ${hasLink ? '' : 'disabled'}
+                        class="rounded-lg ${hasLink ? 'bg-primary-500 hover:bg-primary-600 text-white' : 'bg-slate-200 text-slate-500 cursor-not-allowed'} px-2.5 py-1.5 text-xs font-semibold transition">
+                        跳转
+                      </button>
+                      ${!hasLink ? `<span class="text-xs text-rose-600">链接无效</span>` : ''}
+                    ` : ''}
+                  </div>
+                </div>
+              </div>
+
+              <div class="shrink-0 flex flex-col gap-2 items-end">
+                <button data-action="edit"
+                  class="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
+                  编辑
+                </button>
+                <button data-action="delete"
+                  class="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-semibold text-rose-700 hover:bg-rose-100 active:scale-[0.99] transition">
+                  删除
+                </button>
+              </div>
+            </div>
+
+            <div class="hidden" data-id="${escapeHtml(r.id)}"></div>
+            <div class="hidden" data-link="${escapeHtml(r.link || '')}"></div>
+          </article>
+        `;
+      }).join('');
+    }
+
+    function renderStatsPanel() {
+      const counts = computeStats(state.records);
+      el.statsGrid.innerHTML = STATUS_ORDER.map(s => {
+        const meta = STATUS_META[s];
+        const n = counts[s] ?? 0;
+        return `
+          <div class="rounded-2xl border border-slate-200 bg-white p-4">
+            <div class="flex items-center justify-between">
+              <span class="inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${meta.badge}">
+                <span class="h-1.5 w-1.5 rounded-full ${meta.dot}"></span>
+                ${escapeHtml(meta.label)}
+              </span>
+              <span class="text-xl font-bold text-slate-900">${n}</span>
+            </div>
+            <p class="mt-2 text-xs text-slate-500">当前该状态的记录数量</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function lockBodyScroll(lock) {
+      document.body.style.overflow = lock ? 'hidden' : '';
+    }
+
+    function openModal(mode, record = null) {
+      const isEdit = mode === 'edit';
+      el.modalTitle.textContent = isEdit ? '编辑投递' : '新增投递';
+      el.modalOverlay.classList.remove('hidden');
+
+      setFieldError('company', false);
+      setFieldError('position', false);
+      setFieldError('link', false);
+
+      el.fieldStatus.innerHTML = STATUS_ORDER.map(s => `<option value="${s}">${escapeHtml(STATUS_META[s].label)}</option>`).join('');
+
+      if (!isEdit) {
+        el.fieldId.value = '';
+        el.fieldCompany.value = '';
+        el.fieldPosition.value = '';
+        el.fieldAppliedAt.value = toDateTimeLocalValue(new Date());
+        el.fieldStatus.value = STATUS.TODO;
+        el.fieldLink.value = '';
+        el.fieldNote.value = '';
+        el.fieldDeadline.value = '';
+        updateNoteCount();
+      } else {
+        el.fieldId.value = record.id;
+        el.fieldCompany.value = record.company;
+        el.fieldPosition.value = record.position;
+        const dt = new Date(record.appliedAt);
+        el.fieldAppliedAt.value = Number.isNaN(dt.getTime()) ? toDateTimeLocalValue(new Date()) : toDateTimeLocalValue(dt);
+        el.fieldStatus.value = record.status;
+        el.fieldLink.value = record.link || '';
+        el.fieldNote.value = record.note || '';
+        el.fieldDeadline.value = record.deadline ? formatDate(record.deadline) : '';
+        updateNoteCount();
+      }
+
+      setTimeout(() => el.fieldCompany.focus(), 50);
+      lockBodyScroll(true);
+    }
+
+    function closeModal() {
+      el.modalOverlay.classList.add('hidden');
+      lockBodyScroll(false);
+    }
+
+    function setFieldError(field, on) {
+      const map = { company: el.errCompany, position: el.errPosition, link: el.errLink };
+      const node = map[field];
+      if (!node) return;
+      node.classList.toggle('hidden', !on);
+    }
+
+    function updateNoteCount() {
+      el.noteCount.textContent = String(el.fieldNote.value.length);
+    }
+
+    function validateForm() {
+      const company = el.fieldCompany.value.trim();
+      const position = el.fieldPosition.value.trim();
+      const link = el.fieldLink.value.trim();
+
+      let ok = true;
+      if (!company) { setFieldError('company', true); ok = false; } else setFieldError('company', false);
+      if (!position) { setFieldError('position', true); ok = false; } else setFieldError('position', false);
+      if (link) {
+        const norm = normalizeUrlMaybe(link);
+        if (!norm.ok) { setFieldError('link', true); ok = false; }
+        else setFieldError('link', false);
+      } else {
+        setFieldError('link', false);
+      }
+      return ok;
+    }
+
+    async function upsertRecordFromForm() {
+      const isEdit = !!el.fieldId.value;
+      // 云端模式下必须使用 uuid（便于离线队列 later upsert）
+      const id = isEdit ? el.fieldId.value : (isCloudUsable() ? uuidv4() : uid());
+
+      const company = el.fieldCompany.value.trim();
+      const position = el.fieldPosition.value.trim();
+      const appliedAtLocal = el.fieldAppliedAt.value;
+      const status = el.fieldStatus.value;
+      const linkRaw = el.fieldLink.value.trim();
+      const note = el.fieldNote.value.trim();
+      const deadline = el.fieldDeadline.value;
+
+      const appliedDate = appliedAtLocal ? new Date(appliedAtLocal) : new Date();
+      const appliedAt = Number.isNaN(appliedDate.getTime()) ? new Date().toISOString() : appliedDate.toISOString();
+
+      let link = linkRaw;
+      if (linkRaw) {
+        const norm = normalizeUrlMaybe(linkRaw);
+        if (norm.ok) link = norm.url;
+      }
+
+      const record = {
+        id,
+        company,
+        position,
+        appliedAt,
+        status: STATUS_META[status] ? status : STATUS.TODO,
+        link,
+        note,
+        deadline: deadline ? new Date(deadline + 'T00:00:00').toISOString() : ''
+      };
+
+      // 1) 优先云端同步（登录后）
+      if (isCloudUsable()) {
+        // 先做乐观更新：让 UI 无延迟
+        if (!isEdit) state.records.unshift(record);
+        else {
+          const idx = state.records.findIndex(r => r.id === id);
+          if (idx >= 0) state.records[idx] = record;
+          else state.records.unshift(record);
+        }
+        renderAll();
+
+        try {
+          const row = await cloudUpsert(record);
+          // 用云端返回数据回填（例如 created_at/字段规范化）
+          const mapped = {
+            id: row.id,
+            company: row.company || '',
+            position: row.position || '',
+            appliedAt: row.applied_at || record.appliedAt,
+            status: STATUS_META[row.status] ? row.status : record.status,
+            link: row.link || '',
+            note: row.note || '',
+            deadline: row.deadline ? new Date(row.deadline + 'T00:00:00').toISOString() : ''
+          };
+          const idx = state.records.findIndex(r => r.id === id);
+          if (idx >= 0) state.records[idx] = mapped;
+          else state.records.unshift(mapped);
+          state.dataMode = 'cloud';
+          renderAll();
+          return;
+        } catch (e) {
+          // 云端失败：写入离线队列，稍后自动同步
+          queuePush({ type: 'upsert', record });
+          toast('当前网络不稳定：已先保存到本地队列，联网后自动同步', 'error');
+          return;
+        }
+      }
+
+      // 2) 未登录：仅本地存储
+      if (!isEdit) state.records.unshift(record);
+      else {
+        const idx = state.records.findIndex(r => r.id === id);
+        if (idx >= 0) state.records[idx] = record;
+        else state.records.unshift(record);
+      }
+      saveRecords(state.records);
+    }
+
+    function openConfirm(text, onOk) {
+      el.confirmText.textContent = text;
+      el.confirmOverlay.classList.remove('hidden');
+      lockBodyScroll(true);
+
+      const handler = () => { closeConfirm(); onOk?.(); };
+      el.btnConfirmOk.onclick = handler;
+      el.btnConfirmCancel.onclick = closeConfirm;
+      el.confirmOverlay.onclick = (e) => { if (e.target === el.confirmOverlay) closeConfirm(); };
+    }
+
+    function closeConfirm() {
+      el.confirmOverlay.classList.add('hidden');
+      lockBodyScroll(false);
+      el.btnConfirmOk.onclick = null;
+      el.confirmOverlay.onclick = null;
+    }
+
+    function openStats() {
+      renderStatsPanel();
+      el.statsOverlay.classList.remove('hidden');
+      lockBodyScroll(true);
+    }
+
+    function closeStats() {
+      el.statsOverlay.classList.add('hidden');
+      lockBodyScroll(false);
+    }
+
+    function doExport() {
+      const data = sortByAppliedAtDesc(state.records);
+      const json = JSON.stringify(data, null, 2);
+      try {
+        const blob = new Blob([json], { type: 'application/json;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `实习投递记录导出_${new Date().toISOString().slice(0,10)}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+        toast('已导出为 JSON 文件', 'success');
+      } catch {
+        copyText(json).then(ok => toast(ok ? '导出内容已复制到剪贴板' : '导出失败：请重试', ok ? 'success' : 'error'));
+      }
+    }
+
+    function openImport() {
+      el.importTextarea.value = '';
+      el.importOverlay.classList.remove('hidden');
+      lockBodyScroll(true);
+      setTimeout(() => el.importTextarea.focus(), 50);
+    }
+
+    function closeImport() {
+      el.importOverlay.classList.add('hidden');
+      lockBodyScroll(false);
+    }
+
+    async function doImport() {
+      const raw = el.importTextarea.value.trim();
+      if (!raw) { toast('请输入要导入的 JSON', 'error'); return; }
+      let arr;
+      try { arr = JSON.parse(raw); } catch { toast('JSON 解析失败：请检查格式', 'error'); return; }
+      if (!Array.isArray(arr)) { toast('导入失败：JSON 顶层应为数组', 'error'); return; }
+
+      const incoming = arr
+        .filter(x => x && typeof x === 'object')
+        .map(x => ({
+          id: String(x.id ?? (isCloudUsable() ? uuidv4() : uid())),
+          company: String(x.company ?? '').trim(),
+          position: String(x.position ?? '').trim(),
+          appliedAt: String(x.appliedAt ?? new Date().toISOString()),
+          status: STATUS_META[x.status] ? x.status : STATUS.TODO,
+          link: String(x.link ?? '').trim(),
+          note: String(x.note ?? '').trim(),
+          deadline: String(x.deadline ?? '').trim()
+        }))
+        .filter(x => x.company && x.position);
+
+      // 云端：批量 upsert 到当前账号
+      if (isCloudUsable()) {
+        try {
+          const user_id = getUserId();
+          const payload = incoming.map(r => ({
+            id: r.id,
+            user_id,
+            company: r.company,
+            position: r.position,
+            applied_at: r.appliedAt,
+            status: r.status,
+            link: r.link || null,
+            note: r.note || null,
+            deadline: r.deadline ? String(r.deadline).slice(0, 10) : null
+          }));
+          const { error } = await sb.from(CLOUD_TABLE).upsert(payload, { onConflict: 'id' });
+          if (error) throw error;
+          await cloudPullAllToState();
+          toast(`导入成功：已同步到云端（共 ${incoming.length} 条）`, 'success');
+        } catch (e) {
+          toast('导入到云端失败：' + (e?.message || '请稍后重试'), 'error');
+        }
+      } else {
+        const map = new Map(state.records.map(r => [r.id, r]));
+        for (const r of incoming) map.set(r.id, r);
+        state.records = Array.from(map.values());
+        saveRecords(state.records);
+        toast(`导入成功：合并后共 ${state.records.length} 条`, 'success');
+      }
+
+      state.renderCount = state.pageSize;
+      closeImport();
+      renderAll();
+    }
+
+    function renderAll() {
+      renderStatusChips();
+      renderList();
+    }
+
+    function resetFilters() {
+      state.filterStatus = STATUS.ALL;
+      state.keyword = '';
+      el.inputSearch.value = '';
+      el.btnClearSearch.classList.add('hidden');
+      state.renderCount = state.pageSize;
+      renderAll();
+      toast('已重置筛选与搜索', 'success');
+    }
+
+    function bindListDelegation() {
+      el.list.addEventListener('click', async (e) => {
+        const btn = e.target.closest('button');
+        if (!btn) return;
+        const action = btn.getAttribute('data-action');
+        if (!action) return;
+
+        const card = btn.closest('article');
+        const id = card?.querySelector('[data-id]')?.getAttribute('data-id') || '';
+        const linkRaw = card?.querySelector('[data-link]')?.getAttribute('data-link') || '';
+        const record = state.records.find(r => r.id === id);
+        if (!record) { toast('记录不存在或已被删除', 'error'); return; }
+
+        if (action === 'edit') { openModal('edit', record); return; }
+        if (action === 'delete') {
+          openConfirm(`将删除：${record.company} · ${record.position}\n此操作不可撤销。`, async () => {
+            // UI 先删除（乐观更新）
+            state.records = state.records.filter(r => r.id !== id);
+            renderAll();
+
+            if (isCloudUsable()) {
+              try {
+                await cloudDelete(id);
+              } catch (e) {
+                queuePush({ type: 'delete', id });
+                toast('当前网络不稳定：删除已加入队列，联网后自动同步', 'error');
+              }
+            } else {
+              saveRecords(state.records);
+              toast('已删除', 'success');
+            }
+          });
+          return;
+        }
+        if (action === 'copyLink') {
+          const norm = normalizeUrlMaybe(linkRaw);
+          if (!norm.ok || !norm.url) { toast('链接无效，无法复制', 'error'); return; }
+          const ok = await copyText(norm.url);
+          toast(ok ? '链接已复制' : '复制失败：请手动复制', ok ? 'success' : 'error');
+          return;
+        }
+        if (action === 'openLink') {
+          const norm = normalizeUrlMaybe(linkRaw);
+          if (!norm.ok || !norm.url) { toast('链接无效：请在编辑中修正', 'error'); return; }
+          window.open(norm.url, '_blank', 'noopener,noreferrer');
+        }
+      });
+
+      el.list.addEventListener('change', async (e) => {
+        const sel = e.target.closest('select[data-action="statusSelect"]');
+        if (!sel) return;
+        const card = sel.closest('article');
+        const id = card?.querySelector('[data-id]')?.getAttribute('data-id');
+        if (!id) return;
+        const record = state.records.find(r => r.id === id);
+        if (!record) return;
+        const next = sel.value;
+        if (!STATUS_META[next]) return;
+        record.status = next;
+        renderAll();
+
+        if (isCloudUsable()) {
+          try {
+            await cloudUpdateStatus(id, next);
+          } catch (e2) {
+            queuePush({ type: 'status', id, status: next });
+            toast('当前网络不稳定：进度更新已加入队列，联网后自动同步', 'error');
+          }
+        } else {
+          saveRecords(state.records);
+          toast(`进度已更新为「${STATUS_META[next].label}」`, 'success');
+        }
+      });
+    }
+
+    function bindSearch() {
+      el.inputSearch.addEventListener('input', () => {
+        state.keyword = el.inputSearch.value;
+        el.btnClearSearch.classList.toggle('hidden', !el.inputSearch.value);
+        state.renderCount = state.pageSize;
+        renderAll();
+      });
+
+      el.btnClearSearch.addEventListener('click', () => {
+        el.inputSearch.value = '';
+        state.keyword = '';
+        el.btnClearSearch.classList.add('hidden');
+        state.renderCount = state.pageSize;
+        renderAll();
+        el.inputSearch.focus();
+      });
+    }
+
+    function bindChips() {
+      el.statusChips.addEventListener('click', (e) => {
+        const btn = e.target.closest('button[data-chip]');
+        if (!btn) return;
+        state.filterStatus = btn.getAttribute('data-chip');
+        state.renderCount = state.pageSize;
+        renderAll();
+      });
+    }
+
+    function bindInfiniteScroll() {
+      window.addEventListener('scroll', () => {
+        const filtered = getFilteredRecords();
+        if (filtered.length <= state.renderCount) return;
+        const nearBottom = (window.innerHeight + window.scrollY) >= (document.body.offsetHeight - 300);
+        if (!nearBottom) return;
+        state.renderCount = Math.min(filtered.length, state.renderCount + state.pageSize);
+        renderList();
+      }, { passive: true });
+    }
+
+    function bindModal() {
+      el.btnAdd.addEventListener('click', () => openModal('add'));
+      el.btnCloseModal.addEventListener('click', closeModal);
+      el.btnCancel.addEventListener('click', closeModal);
+      el.modalOverlay.addEventListener('click', (e) => { if (e.target === el.modalOverlay) closeModal(); });
+
+      window.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (!el.modalOverlay.classList.contains('hidden')) closeModal();
+        if (!el.statsOverlay.classList.contains('hidden')) closeStats();
+        if (!el.importOverlay.classList.contains('hidden')) closeImport();
+        if (!el.confirmOverlay.classList.contains('hidden')) closeConfirm();
+      });
+
+      el.form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        if (!validateForm()) { toast('请完善必填项/修正错误后再保存', 'error'); return; }
+        await upsertRecordFromForm();
+        closeModal();
+        state.renderCount = state.pageSize;
+        renderAll();
+        toast('保存成功', 'success');
+      });
+
+      el.btnNow.addEventListener('click', () => {
+        el.fieldAppliedAt.value = toDateTimeLocalValue(new Date());
+        toast('已设为当前时间', 'success');
+      });
+      el.btnClearDeadline.addEventListener('click', () => {
+        el.fieldDeadline.value = '';
+        toast('已清空截止日期', 'success');
+      });
+      el.fieldNote.addEventListener('input', updateNoteCount);
+      el.fieldLink.addEventListener('blur', () => {
+        const raw = el.fieldLink.value.trim();
+        if (!raw) { setFieldError('link', false); return; }
+        const norm = normalizeUrlMaybe(raw);
+        setFieldError('link', !norm.ok);
+        if (norm.ok) el.fieldLink.value = norm.url;
+      });
+    }
+
+    function bindAuthAndCloud() {
+      // 登录
+      el.btnLogin.addEventListener('click', openLogin);
+      el.btnLogout.addEventListener('click', () => logout());
+
+      el.btnCloseLogin.addEventListener('click', closeLogin);
+      el.btnLoginCancel.addEventListener('click', closeLogin);
+      el.loginOverlay.addEventListener('click', (e) => { if (e.target === el.loginOverlay) closeLogin(); });
+
+      el.btnSendLoginLink.addEventListener('click', async () => {
+        const email = el.loginEmail.value.trim();
+        if (!email) { toast('请输入邮箱', 'error'); return; }
+        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('邮箱格式不正确', 'error'); return; }
+        try {
+          await sendLoginLink(email);
+          toast('登录链接已发送，请去邮箱点击完成登录', 'success');
+          closeLogin();
+        } catch (e) {
+          toast('发送失败：' + (e?.message || '请稍后重试'), 'error');
+        }
+      });
+
+      // 上线版：云设置入口已隐藏，无需绑定保存事件
+
+      // 断网恢复后自动同步队列
+      window.addEventListener('online', () => { syncQueueFlush(); });
+    }
+
+    function bindStats() {
+      el.btnOpenStats.addEventListener('click', openStats);
+      el.btnCloseStats.addEventListener('click', closeStats);
+      el.btnStatsOk.addEventListener('click', closeStats);
+      el.statsOverlay.addEventListener('click', (e) => { if (e.target === el.statsOverlay) closeStats(); });
+    }
+
+    function bindDataOps() {
+      el.btnResetFilters.addEventListener('click', resetFilters);
+      el.btnExport.addEventListener('click', doExport);
+      el.btnImport.addEventListener('click', openImport);
+
+      el.btnCloseImport.addEventListener('click', closeImport);
+      el.btnImportCancel.addEventListener('click', closeImport);
+      el.btnImportDo.addEventListener('click', () => { doImport(); });
+      el.importOverlay.addEventListener('click', (e) => { if (e.target === el.importOverlay) closeImport(); });
+    }
+
+    function init() {
+      // 未登录时先加载本地数据；若 Supabase 已配置且已登录，会在 initSupabaseIfPossible 里切到云端数据
+      state.records = loadRecords();
+      el.fieldAppliedAt.value = toDateTimeLocalValue(new Date());
+      renderAll();
+      bindListDelegation();
+      bindSearch();
+      bindChips();
+      bindInfiniteScroll();
+      bindModal();
+      bindStats();
+      bindDataOps();
+      bindAuthAndCloud();
+      el.btnClearSearch.classList.toggle('hidden', !el.inputSearch.value);
+      if (!localStorage.getItem(STORAGE_KEY_LOCAL)) toast('欢迎使用：登录后可多设备云端同步（未登录时数据保存在本机）', 'info');
+
+      // 初始化 Supabase（如果用户已经在云设置里填过）
+      initSupabaseIfPossible();
+    }
+
+    init();
+  </script>
+</body>
+</html>
