@@ -421,7 +421,7 @@
         <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <div>
             <h2 class="text-base font-semibold">登录</h2>
-            <p class="text-xs text-slate-500 mt-0.5">输入邮箱发送验证码；在任意设备打开邮箱获取验证码后，回到本页输入验证码完成登录。</p>
+            <p class="text-xs text-slate-500 mt-0.5">输入邮箱获取验证码，填入后登录。</p>
           </div>
           <button id="btnCloseLogin" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
@@ -434,7 +434,7 @@
           <input id="loginEmail" type="email" placeholder="name@example.com"
             class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
           <p id="loginHint" class="mt-2 text-xs text-slate-500">
-            提示：你可以用手机打开邮箱查看验证码，但请在当前设备输入验证码完成登录（邮箱链接在哪台设备点开，就只会登录那台设备）。
+            提示：请到邮箱查收验证码。
           </p>
           <div id="otpBox" class="hidden mt-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
             <label class="text-xs font-medium text-slate-700">邮箱验证码</label>
@@ -862,7 +862,10 @@
       openOverlay(el.loginOverlay);
       setTimeout(() => el.loginEmail.focus(), 50);
     }
-    function closeLogin() { closeOverlay(el.loginOverlay); }
+    function closeLogin() {
+      // 关闭弹窗时不取消冷却，让用户必须等待 60s 才能再次发送
+      closeOverlay(el.loginOverlay);
+    }
 
     function openCloudSettings() {
       toast('上线版已内置云配置，无需手动设置', 'info');
@@ -890,6 +893,36 @@
       });
       if (error) throw error;
       return data;
+    }
+
+    // 发送验证码冷却（60s）：避免触发 Supabase 邮件限流
+    let sendOtpCooldownTimer = null;
+    function stopSendOtpCooldown() {
+      if (sendOtpCooldownTimer) {
+        clearInterval(sendOtpCooldownTimer);
+        sendOtpCooldownTimer = null;
+      }
+      if (el.btnSendLoginLink) {
+        el.btnSendLoginLink.disabled = false;
+        el.btnSendLoginLink.classList.remove('opacity-60', 'cursor-not-allowed');
+        el.btnSendLoginLink.textContent = '发送验证码';
+      }
+    }
+
+    function startSendOtpCooldown(seconds) {
+      stopSendOtpCooldown();
+      let remain = Math.max(1, Number(seconds) || 60);
+      el.btnSendLoginLink.disabled = true;
+      el.btnSendLoginLink.classList.add('opacity-60', 'cursor-not-allowed');
+      el.btnSendLoginLink.textContent = `重新发送(${remain}s)`;
+      sendOtpCooldownTimer = setInterval(() => {
+        remain -= 1;
+        if (remain <= 0) {
+          stopSendOtpCooldown();
+          return;
+        }
+        el.btnSendLoginLink.textContent = `重新发送(${remain}s)`;
+      }, 1000);
     }
 
     async function logout() {
@@ -1714,10 +1747,13 @@
       el.loginOverlay.addEventListener('click', (e) => { if (e.target === el.loginOverlay) closeLogin(); });
 
       el.btnSendLoginLink.addEventListener('click', async () => {
+        // 60s 冷却：防止频繁触发邮件发送导致 rate limit
+        if (el.btnSendLoginLink.disabled) return;
         const email = el.loginEmail.value.trim();
         if (!email) { toast('请输入邮箱', 'error'); return; }
         if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('邮箱格式不正确', 'error'); return; }
         try {
+          startSendOtpCooldown(60);
           await sendLoginLink(email);
           // 显示验证码输入框，用户可用手机/电脑打开邮箱获取验证码
           el.otpBox.classList.remove('hidden');
@@ -1725,6 +1761,7 @@
           toast('验证码邮件已发送：请从邮件中复制验证码，回到这里粘贴并登录', 'success');
           setTimeout(() => el.loginOtp.focus(), 50);
         } catch (e) {
+          stopSendOtpCooldown();
           toast('发送失败：' + (e?.message || '请稍后重试'), 'error');
         }
       });
