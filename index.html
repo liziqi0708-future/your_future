@@ -1578,12 +1578,12 @@
           else state.records.unshift(mapped);
           state.dataMode = 'cloud';
           renderAll();
-          return;
+          return mapped;
         } catch (e) {
           // 云端失败：写入离线队列，稍后自动同步
           queuePush({ type: 'upsert', record });
           toast('当前网络不稳定：已先保存到本地队列，联网后自动同步', 'error');
-          return;
+          return record;
         }
       }
 
@@ -1595,6 +1595,7 @@
         else state.records.unshift(record);
       }
       saveRecords(state.records);
+      return record;
     }
 
     function openConfirm(text, onOk) {
@@ -1789,6 +1790,13 @@
         record.status = next;
         renderAll();
 
+        // 分栏归类：如果当前在某个状态栏里切换了进度，让 UI 自动切到新状态栏
+        if (state.filterStatus !== STATUS.ALL && state.filterStatus !== next) {
+          state.filterStatus = next;
+          state.renderCount = state.pageSize;
+          renderAll();
+        }
+
         if (isCloudUsable()) {
           try {
             await cloudUpdateStatus(id, next);
@@ -1860,8 +1868,12 @@
         e.preventDefault();
         if (!validateForm()) { toast('请完善必填项/修正错误后再保存', 'error'); return; }
         try {
-          await upsertRecordFromForm();
+          const saved = await upsertRecordFromForm();
           toast('保存成功', 'success');
+          // 分栏归类：新增/编辑后自动切到所选投递状态栏
+          if (saved?.status && STATUS_META[saved.status]) {
+            state.filterStatus = saved.status;
+          }
         } catch (err) {
           // 保底：即使 upsert 内部出现未捕获异常，也不应该卡在弹窗
           toast('保存失败：' + (err?.message || '请稍后重试'), 'error');
