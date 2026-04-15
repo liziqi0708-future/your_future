@@ -728,6 +728,8 @@
       authMode: 'signIn', // signIn | signUp | forgot
       lastSignUpEmail: '',
       lastSignUpAt: 0,
+      // 密码重置流程：当通过邮件 recovery 回跳进入时置为 true
+      resetFlow: false,
     };
 
     function uid() {
@@ -839,10 +841,43 @@
         const u = new URL(window.location.href);
         u.search = '';
         u.hash = '';
+        // 加一个显式标记：让任何新开的窗口/标签页都进入“设置新密码”界面，而不是当作普通已登录页
+        u.searchParams.set('reset', '1');
         return u.toString();
       } catch {
         return window.location.href;
       }
+    }
+
+    function isResetFlowUrl() {
+      try {
+        const u = new URL(window.location.href);
+        if (u.searchParams.get('reset') === '1') return true;
+      } catch {}
+      // 兼容旧链接：hash/query 里带 recovery 也算
+      const href = window.location.href;
+      return /[?#&]type=recovery\b/i.test(href) || /[?#&]type=PASSWORD_RECOVERY\b/i.test(href);
+    }
+
+    function cleanAuthParamsFromUrl() {
+      // 清理地址栏的 code/type/reset，避免 code 被重复使用导致卡住/反复触发
+      try {
+        const u = new URL(window.location.href);
+        u.searchParams.delete('code');
+        u.searchParams.delete('type');
+        u.searchParams.delete('reset');
+        u.hash = '';
+        window.history.replaceState({}, document.title, u.toString());
+      } catch {
+        // ignore
+      }
+    }
+
+    function enterResetFlow() {
+      state.resetFlow = true;
+      openResetOverlay();
+      // 不要让地址栏一直带着 code/type
+      cleanAuthParamsFromUrl();
     }
 
     // 注意：supabase-js 会在全局暴露 window.supabase（命名空间），
@@ -875,22 +910,15 @@
       updateAuthUI();
 
       // 兜底：如果当前 URL 本身就是 recovery 回跳（例如 ?code=... 或 #...type=recovery），
-      // 有些浏览器/多标签页情况下 onAuthStateChange 可能不稳定触发，这里主动尝试打开重置面板。
-      // 同时尝试 exchangeCodeForSession（PKCE 流）以确保 session 就绪。
+      // 或我们自己标记了 reset=1，则进入重置流程。
       try {
-        const href = window.location.href;
-        const hasRecoveryHint =
-          /[?#&]type=recovery\b/i.test(href) ||
-          /[?#&]type=PASSWORD_RECOVERY\b/i.test(href) ||
-          /[?&]code=/.test(href);
-        if (hasRecoveryHint) {
-          // 若是 PKCE code 回跳，尝试交换成 session（注意：只传 code 字符串）
+        if (isResetFlowUrl() || /[?&]code=/.test(window.location.href)) {
           const u = new URL(window.location.href);
           const code = u.searchParams.get('code');
           if (code && typeof sb.auth.exchangeCodeForSession === 'function') {
             await sb.auth.exchangeCodeForSession(code);
           }
-          openResetOverlay();
+          enterResetFlow();
         }
       } catch {
         // ignore
@@ -904,11 +932,12 @@
 
         // 密码重置：用户点击邮件里的 recovery 链接，会触发 PASSWORD_RECOVERY
         if (event === 'PASSWORD_RECOVERY') {
-          openResetOverlay();
+          enterResetFlow();
           return;
         }
 
-        if (state.session) {
+        // 如果正在重置密码，不要当作“正常登录”去拉数据/同步，避免用户看到像“已登录的主界面”
+        if (state.session && !state.resetFlow) {
           await cloudPullAllToState();
           // 登录后尝试同步离线队列
           await syncQueueFlush();
@@ -922,7 +951,7 @@
       });
 
       // 如果已经登录，优先拉云端数据
-      if (state.session) {
+      if (state.session && !state.resetFlow) {
         await cloudPullAllToState();
         await syncQueueFlush();
       } else {
@@ -2002,6 +2031,7 @@
           await withTimeout(authUpdatePassword(p1), 12000, '更新密码');
           toast('密码已更新，请重新登录', 'success');
           closeResetOverlay();
+          state.resetFlow = false;
           // 退出当前 recovery session，避免误用
           await withTimeout(logout(), 12000, '退出登录');
         } catch (e2) {
