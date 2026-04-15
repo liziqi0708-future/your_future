@@ -1965,28 +1965,21 @@
           toast('登录成功', 'success');
           closeLogin();
         } catch (e) {
-          const status = e?.status;
-          const code = e?.code;
           const msg = String(e?.message || '');
-          const hint = status ? `（HTTP ${status}${code ? ` / ${code}` : ''}）` : (code ? `（${code}）` : '');
-
-          // Supabase 常见：400 + invalid_credentials
-          if (/Invalid login credentials/i.test(msg) || code === 'invalid_credentials' || status === 400) {
+          if (/Invalid login credentials/i.test(msg)) {
             const recentSameEmail =
               state.lastSignUpEmail &&
               state.lastSignUpEmail === email.toLowerCase() &&
               (Date.now() - state.lastSignUpAt) < 5 * 60 * 1000;
             if (recentSameEmail) {
-              toast(`已注册但暂时无法登录${hint}：可能原因：1) 邮箱未确认；2) 你输入的密码与注册/重置后的不一致。可先点“重置密码”重新设置一次。`, 'error');
+              toast('已注册但暂时无法登录：请确认 Supabase 已关闭邮箱确认；或稍后再试/用“重置密码”设置一次密码', 'error');
             } else {
-              toast(`登录失败${hint}：账号未注册或密码错误（请确认使用“重置成功后的新密码”登录）`, 'error');
+              toast('账号未注册或密码错误，请先注册或重置密码', 'error');
             }
-          } else if (/Email not confirmed/i.test(msg) || code === 'email_not_confirmed') {
-            toast(`该邮箱尚未确认${hint}：请先到邮箱完成确认后再登录`, 'error');
+          } else if (/Email not confirmed/i.test(msg)) {
+            toast('该邮箱尚未确认：请先到邮箱完成确认后再登录', 'error');
           } else {
-            // 兜底：把关键信息吐出来，避免只在控制台看到 400
-            const fallback = msg || (typeof e === 'string' ? e : '');
-            toast('操作失败' + hint + '：' + (fallback || '请稍后重试'), 'error');
+            toast('操作失败：' + (e?.message || '请稍后重试'), 'error');
           }
         }
       });
