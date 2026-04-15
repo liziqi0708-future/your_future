@@ -643,6 +643,7 @@
       modalTitle: $('#modalTitle'),
       btnCloseModal: $('#btnCloseModal'),
       btnCancel: $('#btnCancel'),
+      btnSave: $('#btnSave'),
       form: $('#form'),
 
       fieldId: $('#fieldId'),
@@ -1848,6 +1849,21 @@
       el.btnCancel.addEventListener('click', closeModal);
       el.modalOverlay.addEventListener('click', (e) => { if (e.target === el.modalOverlay) closeModal(); });
 
+      // 兜底：部分浏览器/环境下点击 submit 按钮不触发 submit（或被冒泡/遮罩影响）
+      // 这里强制触发表单提交，避免“保存没反应”
+      if (el.btnSave) {
+        el.btnSave.addEventListener('click', (e) => {
+          // 让 submit handler 统一处理
+          e.preventDefault();
+          try {
+            if (typeof el.form.requestSubmit === 'function') el.form.requestSubmit();
+            else el.form.dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
+          } catch {
+            // ignore
+          }
+        });
+      }
+
       window.addEventListener('keydown', (e) => {
         if (e.key !== 'Escape') return;
         if (!el.modalOverlay.classList.contains('hidden')) closeModal();
@@ -1859,6 +1875,13 @@
       el.form.addEventListener('submit', async (e) => {
         e.preventDefault();
         if (!validateForm()) { toast('请完善必填项/修正错误后再保存', 'error'); return; }
+        const btn = el.btnSave;
+        const old = btn?.textContent;
+        if (btn) {
+          btn.disabled = true;
+          btn.classList.add('opacity-70', 'cursor-not-allowed');
+          btn.textContent = '保存中…';
+        }
         try {
           await upsertRecordFromForm();
           toast('保存成功', 'success');
@@ -1866,6 +1889,11 @@
           // 保底：即使 upsert 内部出现未捕获异常，也不应该卡在弹窗
           toast('保存失败：' + (err?.message || '请稍后重试'), 'error');
         } finally {
+          if (btn) {
+            btn.disabled = false;
+            btn.classList.remove('opacity-70', 'cursor-not-allowed');
+            btn.textContent = old || '保存';
+          }
           closeModal();
           state.renderCount = state.pageSize;
           renderAll();
