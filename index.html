@@ -884,9 +884,11 @@
           /[?#&]type=PASSWORD_RECOVERY\b/i.test(href) ||
           /[?&]code=/.test(href);
         if (hasRecoveryHint) {
-          // 若是 PKCE code 回跳，尝试交换成 session（重复调用也安全）
-          if (typeof sb.auth.exchangeCodeForSession === 'function') {
-            await sb.auth.exchangeCodeForSession(href);
+          // 若是 PKCE code 回跳，尝试交换成 session（注意：只传 code 字符串）
+          const u = new URL(window.location.href);
+          const code = u.searchParams.get('code');
+          if (code && typeof sb.auth.exchangeCodeForSession === 'function') {
+            await sb.auth.exchangeCodeForSession(code);
           }
           openResetOverlay();
         }
@@ -1933,21 +1935,28 @@
           toast('登录成功', 'success');
           closeLogin();
         } catch (e) {
+          const status = e?.status;
+          const code = e?.code;
           const msg = String(e?.message || '');
-          if (/Invalid login credentials/i.test(msg)) {
+          const hint = status ? `（HTTP ${status}${code ? ` / ${code}` : ''}）` : (code ? `（${code}）` : '');
+
+          // Supabase 常见：400 + invalid_credentials
+          if (/Invalid login credentials/i.test(msg) || code === 'invalid_credentials' || status === 400) {
             const recentSameEmail =
               state.lastSignUpEmail &&
               state.lastSignUpEmail === email.toLowerCase() &&
               (Date.now() - state.lastSignUpAt) < 5 * 60 * 1000;
             if (recentSameEmail) {
-              toast('已注册但暂时无法登录：请确认 Supabase 已关闭邮箱确认；或稍后再试/用“重置密码”设置一次密码', 'error');
+              toast(`已注册但暂时无法登录${hint}：可能原因：1) 邮箱未确认；2) 你输入的密码与注册/重置后的不一致。可先点“重置密码”重新设置一次。`, 'error');
             } else {
-              toast('账号未注册或密码错误，请先注册或重置密码', 'error');
+              toast(`登录失败${hint}：账号未注册或密码错误（请确认使用“重置成功后的新密码”登录）`, 'error');
             }
-          } else if (/Email not confirmed/i.test(msg)) {
-            toast('该邮箱尚未确认：请先到邮箱完成确认后再登录', 'error');
+          } else if (/Email not confirmed/i.test(msg) || code === 'email_not_confirmed') {
+            toast(`该邮箱尚未确认${hint}：请先到邮箱完成确认后再登录`, 'error');
           } else {
-            toast('操作失败：' + (e?.message || '请稍后重试'), 'error');
+            // 兜底：把关键信息吐出来，避免只在控制台看到 400
+            const fallback = msg || (typeof e === 'string' ? e : '');
+            toast('操作失败' + hint + '：' + (fallback || '请稍后重试'), 'error');
           }
         }
       });
@@ -1967,22 +1976,34 @@
         btn.disabled = true;
         btn.classList.add('opacity-70', 'cursor-not-allowed');
         btn.textContent = '重置中…';
+
+        const withTimeout = (p, ms, label) => Promise.race([
+          Promise.resolve(p),
+          new Promise((_, rej) => setTimeout(() => rej(new Error((label ? label + '：' : '') + '请求超时，请刷新页面后重试')), ms))
+        ]);
+
         try {
           // 如果当前并没有 session（常见于：同一账号在另一个标签页先“接管登录”），
           // 尝试用 URL 中的 code/token 重新交换一次，再更新密码。
           if (!state.session && sb && typeof sb.auth.exchangeCodeForSession === 'function') {
-            try { await sb.auth.exchangeCodeForSession(window.location.href); } catch {}
-            const { data } = await sb.auth.getSession();
+            try {
+              const u = new URL(window.location.href);
+              const code = u.searchParams.get('code');
+              if (code) {
+                await withTimeout(sb.auth.exchangeCodeForSession(code), 12000, '会话交换');
+              }
+            } catch {}
+            const { data } = await withTimeout(sb.auth.getSession(), 12000, '读取会话');
             state.session = data?.session ?? null;
             state.userEmail = state.session?.user?.email ?? '';
             updateAuthUI();
           }
 
-          await authUpdatePassword(p1);
+          await withTimeout(authUpdatePassword(p1), 12000, '更新密码');
           toast('密码已更新，请重新登录', 'success');
           closeResetOverlay();
           // 退出当前 recovery session，避免误用
-          await logout();
+          await withTimeout(logout(), 12000, '退出登录');
         } catch (e2) {
           toast('重置失败：' + (e2?.message || '请稍后重试'), 'error');
         } finally {
