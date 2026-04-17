@@ -994,11 +994,15 @@
           // 登录后尝试同步离线队列
           await syncQueueFlush();
         } else {
-          // 退出后回到本地数据
-          state.dataMode = 'local';
-          state.records = loadRecords();
-          state.renderCount = state.pageSize;
-          renderAll();
+          // 重要：某些环境下“未登录的初始事件”会在用户首次点击后才触发。
+          // 这里如果无条件覆盖 records，会造成“点一下列表瞬间消失”的错觉。
+          // 只有在明确的退出事件时，才切回本地数据并覆盖。
+          if (event === 'SIGNED_OUT') {
+            state.dataMode = 'local';
+            state.records = loadRecords();
+            state.renderCount = state.pageSize;
+            renderAll();
+          }
         }
       });
 
@@ -1007,8 +1011,8 @@
         await cloudPullAllToState();
         await syncQueueFlush();
       } else {
+        // 未登录：保持 init() 阶段已经展示的数据（local 或缓存），避免被异步初始化覆盖为空
         state.dataMode = 'local';
-        state.records = loadRecords();
       }
     }
 
