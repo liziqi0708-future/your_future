@@ -736,6 +736,21 @@
       resetFlow: false,
     };
 
+    function setRecords(next, { allowEmpty = false, reason = '' } = {}) {
+      const arr = Array.isArray(next) ? next : [];
+      const prevLen = Array.isArray(state.records) ? state.records.length : 0;
+      const nextLen = arr.length;
+
+      if (!allowEmpty && prevLen > 0 && nextLen === 0) {
+        toast('检测到异常清空已被拦截（数据未丢失）。如仍异常，请截图反馈当前操作步骤。', 'error');
+        return false;
+      }
+
+      state.records = arr;
+      persistCurrentRecords();
+      return true;
+    }
+
     function uid() {
       return 'r_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
     }
@@ -999,7 +1014,7 @@
           // 只有在明确的退出事件时，才切回本地数据并覆盖。
           if (event === 'SIGNED_OUT') {
             state.dataMode = 'local';
-            state.records = loadRecords();
+            setRecords(loadRecords(), { allowEmpty: true, reason: 'auth_signed_out_load_local' });
             state.renderCount = state.pageSize;
             renderAll();
           }
@@ -1146,7 +1161,7 @@
         state.userEmail = '';
         updateAuthUI();
         state.dataMode = 'local';
-        state.records = loadRecords();
+        setRecords(loadRecords(), { allowEmpty: true, reason: 'logout_no_sb_load_local' });
         state.renderCount = state.pageSize;
         renderAll();
         toast('已退出（本地会话已清理）', 'success');
@@ -1164,7 +1179,7 @@
         state.userEmail = '';
         updateAuthUI();
         state.dataMode = 'local';
-        state.records = loadRecords();
+        setRecords(loadRecords(), { allowEmpty: true, reason: 'logout_finally_load_local' });
         state.renderCount = state.pageSize;
         renderAll();
       }
@@ -1243,7 +1258,7 @@
       }
 
       state.dataMode = 'cloud';
-      state.records = (data || []).map(row => ({
+      setRecords((data || []).map(row => ({
         id: row.id,
         company: row.company || '',
         position: row.position || '',
@@ -1253,7 +1268,7 @@
         note: row.note || '',
         // deadline 在 DB 是 date（YYYY-MM-DD），这里转成本地可展示的 ISO
         deadline: row.deadline ? new Date(row.deadline + 'T00:00:00').toISOString() : ''
-      }));
+      })), { allowEmpty: true, reason: 'cloud_pull_all' });
       state.renderCount = state.pageSize;
       renderAll();
       // 云端拉取成功后同时更新本地缓存，避免离线/刷新空白
@@ -1755,8 +1770,7 @@
       } else {
         const map = new Map(state.records.map(r => [r.id, r]));
         for (const r of incoming) map.set(r.id, r);
-        state.records = Array.from(map.values());
-        saveRecords(state.records);
+        setRecords(Array.from(map.values()), { allowEmpty: true, reason: 'import_merge_local' });
         toast(`导入成功：合并后共 ${state.records.length} 条`, 'success');
       }
 
@@ -1797,7 +1811,7 @@
         if (action === 'delete') {
           openConfirm(`将删除：${record.company} · ${record.position}\n此操作不可撤销。`, async () => {
             // UI 先删除（乐观更新）
-            state.records = state.records.filter(r => r.id !== id);
+            setRecords(state.records.filter(r => r.id !== id), { allowEmpty: true, reason: 'delete_optimistic' });
             renderAll();
 
             if (isCloudUsable()) {
@@ -2127,13 +2141,13 @@
 
     function init() {
       // 未登录时先加载本地数据；若 Supabase 已配置且已登录，会在 initSupabaseIfPossible 里切到云端数据
-      state.records = loadRecords();
+      setRecords(loadRecords(), { allowEmpty: true, reason: 'init_load_local' });
       // 如果用户已登录但云端还没拉取完成，先用本地 cache 做“秒开”展示（避免白屏/空列表）
       // 注意：真正数据仍以 cloudPullAllToState 为准
       try {
         const cached = loadCloudCache();
         if (cached.length) {
-          state.records = cached;
+          setRecords(cached, { allowEmpty: false, reason: 'init_load_cloud_cache' });
           state.dataMode = 'cloud';
         }
       } catch {}
