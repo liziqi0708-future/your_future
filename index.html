@@ -397,6 +397,14 @@
               <input type="password" id="authPassword" required placeholder="请输入 6 位以上密码" 
                 class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-50/50 focus:border-brand-400 focus:bg-white transition-all">
             </div>
+            <div id="confirmPasswordGroup" class="space-y-2 hidden">
+              <label class="text-[10px] font-black text-slate-400 uppercase tracking-[0.2em] ml-1">确认密码</label>
+              <input type="password" id="authConfirmPassword" placeholder="请再次输入密码" 
+                class="w-full px-5 py-4 bg-slate-50 border-2 border-slate-50 rounded-2xl text-sm font-semibold focus:outline-none focus:ring-4 focus:ring-brand-50/50 focus:border-brand-400 focus:bg-white transition-all">
+            </div>
+            <div id="forgotPasswordZone" class="text-right">
+              <button type="button" id="btnForgotPassword" class="text-[10px] font-bold text-slate-400 hover:text-brand-600 transition-colors">忘记密码？</button>
+            </div>
             <button type="submit" id="btnAuthSubmit" class="w-full py-4 bg-brand-500 text-white rounded-2xl text-sm font-bold hover:bg-brand-600 shadow-xl shadow-brand-100 active:scale-95 transition-all mt-4 flex items-center justify-center gap-2">
               立即登录
             </button>
@@ -538,9 +546,10 @@
           state.user = null;
           state.loadLocal();
           state.render();
+        } else if (event === 'PASSWORD_RECOVERY') {
+          // 还原：进入重置密码流程
+          openAuth('reset');
         }
-        // 忽略 USER_UPDATED, TOKEN_REFRESHED 等频繁触发的事件
-        // 避免点击页面（触发 session 检查）时导致的重复同步
       });
     }
 
@@ -828,14 +837,61 @@
 
       // 认证模态框控制
       const openAuth = (mode = 'login') => {
-        const isLogin = mode === 'login';
-        document.getElementById('authTitle').textContent = isLogin ? '欢迎回来' : '开启云同步';
-        document.getElementById('authDesc').textContent = isLogin ? '登录后开启云端实时同步功能' : '创建一个账号，在多端查看记录';
-        document.getElementById('btnAuthSubmit').textContent = isLogin ? '立即登录' : '注册账号';
-        document.getElementById('btnSwitchAuth').textContent = isLogin ? '没有账号？立即注册' : '已有账号？立即登录';
-        document.getElementById('authIcon').setAttribute('data-lucide', isLogin ? 'log-in' : 'user-plus');
-        lucide.createIcons();
+        const titleEl = document.getElementById('authTitle');
+        const descEl = document.getElementById('authDesc');
+        const submitBtn = document.getElementById('btnAuthSubmit');
+        const switchBtn = document.getElementById('btnSwitchAuth');
+        const confirmGroup = document.getElementById('confirmPasswordGroup');
+        const forgotZone = document.getElementById('forgotPasswordZone');
+        const iconEl = document.getElementById('authIcon');
+        const emailInput = document.getElementById('authEmail');
+        const passwordLabel = document.querySelector('label[for="authPassword"]') || document.getElementById('authPassword').previousElementSibling;
 
+        // 默认状态清空
+        confirmGroup.classList.add('hidden');
+        forgotZone.classList.remove('hidden');
+        emailInput.parentElement.classList.remove('hidden');
+        emailInput.previousElementSibling.classList.remove('hidden');
+
+        if (mode === 'login') {
+          titleEl.textContent = '欢迎回来';
+          descEl.textContent = '登录后开启云端实时同步功能';
+          submitBtn.textContent = '立即登录';
+          switchBtn.textContent = '没有账号？立即注册';
+          switchBtn.classList.remove('hidden');
+          iconEl.setAttribute('data-lucide', 'log-in');
+        } else if (mode === 'signup') {
+          titleEl.textContent = '开启云同步';
+          descEl.textContent = '创建一个账号，在多端查看记录';
+          submitBtn.textContent = '注册账号';
+          switchBtn.textContent = '已有账号？立即登录';
+          switchBtn.classList.remove('hidden');
+          confirmGroup.classList.remove('hidden');
+          forgotZone.classList.add('hidden');
+          iconEl.setAttribute('data-lucide', 'user-plus');
+        } else if (mode === 'forgot') {
+          titleEl.textContent = '找回密码';
+          descEl.textContent = '我们将向您的邮箱发送重置链接';
+          submitBtn.textContent = '发送重置邮件';
+          switchBtn.textContent = '想起密码了？返回登录';
+          switchBtn.classList.remove('hidden');
+          document.getElementById('authPassword').parentElement.classList.add('hidden');
+          document.getElementById('authPassword').previousElementSibling.classList.add('hidden');
+          forgotZone.classList.add('hidden');
+          iconEl.setAttribute('data-lucide', 'mail');
+        } else if (mode === 'reset') {
+          titleEl.textContent = '设置新密码';
+          descEl.textContent = '请确保新密码足够安全且易记';
+          submitBtn.textContent = '保存新密码';
+          switchBtn.classList.add('hidden');
+          confirmGroup.classList.remove('hidden');
+          forgotZone.classList.add('hidden');
+          emailInput.parentElement.classList.add('hidden');
+          emailInput.previousElementSibling.classList.add('hidden');
+          iconEl.setAttribute('data-lucide', 'shield-check');
+        }
+
+        lucide.createIcons();
         const overlay = document.getElementById('authModal');
         const content = document.getElementById('authModalContent');
         overlay.classList.remove('hidden');
@@ -844,6 +900,9 @@
           content.classList.remove('translate-y-8');
         }, 10);
       };
+
+      // 暴露给 initAuth 使用
+      window.openAuth = openAuth;
 
       const closeAuth = () => {
         const overlay = document.getElementById('authModal');
@@ -856,37 +915,61 @@
       document.getElementById('btnLogin').addEventListener('click', () => openAuth('login'));
       document.getElementById('btnSignUp').addEventListener('click', () => openAuth('signup'));
       document.getElementById('btnAuthClose').addEventListener('click', closeAuth);
+      document.getElementById('btnForgotPassword').addEventListener('click', () => openAuth('forgot'));
+      
       document.getElementById('btnSwitchAuth').addEventListener('click', () => {
-        const isLogin = document.getElementById('authTitle').textContent === '欢迎回来';
-        openAuth(isLogin ? 'signup' : 'login');
+        const title = document.getElementById('authTitle').textContent;
+        if (title === '欢迎回来') openAuth('signup');
+        else if (title === '开启云同步' || title === '找回密码') openAuth('login');
       });
 
       document.getElementById('authForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         const email = document.getElementById('authEmail').value;
         const password = document.getElementById('authPassword').value;
-        const isLogin = document.getElementById('authTitle').textContent === '欢迎回来';
+        const confirmPassword = document.getElementById('authConfirmPassword').value;
+        const title = document.getElementById('authTitle').textContent;
         const btn = document.getElementById('btnAuthSubmit');
         
         btn.disabled = true;
+        const originalText = btn.textContent;
         btn.innerHTML = '<span class="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>';
 
         try {
-          let result;
-          if (isLogin) {
-            result = await sb.auth.signInWithPassword({ email, password });
-          } else {
-            result = await sb.auth.signUp({ email, password });
+          if (title === '欢迎回来') {
+            // 登录
+            const { error } = await sb.auth.signInWithPassword({ email, password });
+            if (error) throw error;
+            showToast('欢迎回来！', 'success');
+            closeAuth();
+          } else if (title === '开启云同步') {
+            // 注册
+            if (password !== confirmPassword) throw new Error('两次输入的密码不一致');
+            const { error } = await sb.auth.signUp({ email, password });
+            if (error) throw error;
+            showToast('注册成功，请查收验证邮件', 'success');
+            closeAuth();
+          } else if (title === '找回密码') {
+            // 找回密码
+            const { error } = await sb.auth.resetPasswordForEmail(email, {
+              redirectTo: window.location.href,
+            });
+            if (error) throw error;
+            showToast('重置邮件已发送，请检查收件箱', 'success');
+            closeAuth();
+          } else if (title === '设置新密码') {
+            // 重置新密码
+            if (password !== confirmPassword) throw new Error('两次输入的密码不一致');
+            const { error } = await sb.auth.updateUser({ password });
+            if (error) throw error;
+            showToast('密码重置成功', 'success');
+            closeAuth();
           }
-          if (result.error) throw result.error;
-          
-          showToast(isLogin ? '欢迎回来！' : '注册成功，请查收验证邮件', 'success');
-          closeAuth();
         } catch (err) {
           showToast(err.message, 'error');
         } finally {
           btn.disabled = false;
-          btn.textContent = isLogin ? '立即登录' : '注册账号';
+          btn.textContent = originalText;
         }
       });
 
