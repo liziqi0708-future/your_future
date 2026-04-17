@@ -51,6 +51,12 @@
     .break-anywhere { overflow-wrap: anywhere; word-break: break-word; }
     @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
     .animate-fadeIn { animation: fadeIn .18s ease-out; }
+    
+    /* 自定义滚动条 */
+    .custom-scrollbar::-webkit-scrollbar { width: 5px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
   </style>
 </head>
 
@@ -207,97 +213,169 @@
     <div class="absolute inset-0 bg-slate-900/45"></div>
     <div class="absolute inset-0 flex items-end sm:items-center justify-center p-3 sm:p-6">
       <div class="w-full max-w-xl rounded-2xl bg-white shadow-xl border border-slate-200 overflow-hidden animate-fadeIn">
-        <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between">
-          <div>
-            <h2 id="modalTitle" class="text-base font-semibold">新增投递</h2>
-            <p class="text-xs text-slate-500 mt-0.5">必填项已标注，保存后自动本地永久存储。</p>
+        <div class="px-4 sm:px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50">
+          <div class="flex items-center gap-3">
+            <div class="h-10 w-10 rounded-xl bg-primary-500 flex items-center justify-center text-white shadow-sm">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+                <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+              </svg>
+            </div>
+            <div>
+              <h2 id="modalTitle" class="text-base font-bold text-slate-900">新增投递</h2>
+              <p class="text-[11px] text-slate-500">记录每一次机会，成就更好的未来</p>
+            </div>
           </div>
-          <button id="btnCloseModal" class="rounded-xl p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition" aria-label="关闭">
+          <button id="btnCloseModal" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition" aria-label="关闭">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
               <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
             </svg>
           </button>
         </div>
 
-        <form id="form" class="px-4 sm:px-5 py-4">
+        <form id="form" class="max-h-[75vh] overflow-y-auto px-4 sm:px-5 py-5 custom-scrollbar">
           <input id="fieldId" type="hidden" />
 
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label class="text-xs font-medium text-slate-700">公司名称 <span class="text-rose-600">*</span></label>
-              <input id="fieldCompany" type="text" maxlength="50" placeholder="如：字节跳动"
-                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
-              <p id="errCompany" class="hidden mt-1 text-xs text-rose-600">请输入公司名称</p>
-            </div>
+          <div class="space-y-5">
+            <!-- 基本信息组 -->
+            <div class="space-y-4">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-1 h-4 bg-primary-500 rounded-full"></span>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">基本信息</h3>
+              </div>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="relative group">
+                  <label class="text-xs font-bold text-slate-700 ml-1">公司名称 <span class="text-rose-500">*</span></label>
+                  <div class="mt-1.5 relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"></rect><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"></path></svg>
+                    </span>
+                    <input id="fieldCompany" type="text" maxlength="50" placeholder="如：字节跳动"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/30 pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 focus:bg-white transition-all" />
+                  </div>
+                  <p id="errCompany" class="hidden mt-1.5 text-[11px] text-rose-500 flex items-center gap-1">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    请输入公司名称
+                  </p>
+                </div>
 
-            <div>
-              <label class="text-xs font-medium text-slate-700">岗位名称 <span class="text-rose-600">*</span></label>
-              <input id="fieldPosition" type="text" maxlength="60" placeholder="如：前端开发实习生"
-                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
-              <p id="errPosition" class="hidden mt-1 text-xs text-rose-600">请输入岗位名称</p>
-            </div>
-
-            <div>
-              <label class="text-xs font-medium text-slate-700">投递时间</label>
-              <input id="fieldAppliedAt" type="datetime-local"
-                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
-              <p class="mt-1 text-xs text-slate-500">默认当前时间，可手动修改。</p>
-            </div>
-
-            <div>
-              <label class="text-xs font-medium text-slate-700">投递进度</label>
-              <select id="fieldStatus"
-                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition"></select>
-              <p class="mt-1 text-xs text-slate-500">支持在列表中一键切换。</p>
-            </div>
-
-            <div class="sm:col-span-2">
-              <label class="text-xs font-medium text-slate-700">岗位链接</label>
-              <input id="fieldLink" type="url" placeholder="如：https://xxx.com/job/123（可留空）"
-                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
-              <p id="errLink" class="hidden mt-1 text-xs text-rose-600">链接格式无效，请检查（支持自动补全 https://）</p>
-            </div>
-
-            <div class="sm:col-span-2">
-              <label class="text-xs font-medium text-slate-700">备注</label>
-              <textarea id="fieldNote" rows="3" maxlength="500" placeholder="如：内推人/进展/面试安排等（可留空）"
-                class="mt-1 w-full resize-none rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition"></textarea>
-              <div class="mt-1 flex items-center justify-between text-xs text-slate-500">
-                <span>建议记录关键信息，方便复盘。</span>
-                <span><span id="noteCount">0</span>/500</span>
+                <div class="relative group">
+                  <label class="text-xs font-bold text-slate-700 ml-1">岗位名称 <span class="text-rose-500">*</span></label>
+                  <div class="mt-1.5 relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+                    </span>
+                    <input id="fieldPosition" type="text" maxlength="60" placeholder="如：前端开发实习生"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/30 pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 focus:bg-white transition-all" />
+                  </div>
+                  <p id="errPosition" class="hidden mt-1.5 text-[11px] text-rose-500 flex items-center gap-1">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    请输入岗位名称
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div>
-              <label class="text-xs font-medium text-slate-700">截止日期</label>
-              <input id="fieldDeadline" type="date"
-                class="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
-              <p class="mt-1 text-xs text-slate-500">可用于提醒自己岗位截止时间。</p>
+            <!-- 状态与时间组 -->
+            <div class="space-y-4">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-1 h-4 bg-primary-500 rounded-full"></span>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">进度与时间</h3>
+              </div>
+              
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label class="text-xs font-bold text-slate-700 ml-1">当前进度</label>
+                  <div class="mt-1.5 relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
+                    </span>
+                    <select id="fieldStatus"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/30 pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 focus:bg-white appearance-none transition-all"></select>
+                    <span class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m6 9 6 6 6-6"/></svg>
+                    </span>
+                  </div>
+                </div>
+
+                <div>
+                  <label class="text-xs font-bold text-slate-700 ml-1">投递时间</label>
+                  <div class="mt-1.5 flex gap-2">
+                    <div class="relative flex-1">
+                      <input id="fieldAppliedAt" type="datetime-local"
+                        class="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 focus:bg-white transition-all" />
+                    </div>
+                    <button id="btnNow" type="button" title="设为当前时间"
+                      class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-all text-slate-600">
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
 
-            <div>
-              <label class="text-xs font-medium text-slate-700">快捷操作</label>
-              <div class="mt-1 flex gap-2">
-                <button id="btnNow" type="button"
-                  class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
-                  设为当前时间
-                </button>
-                <button id="btnClearDeadline" type="button"
-                  class="flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
-                  清空截止日
-                </button>
+            <!-- 更多详情组 -->
+            <div class="space-y-4">
+              <div class="flex items-center gap-2 mb-1">
+                <span class="w-1 h-4 bg-primary-500 rounded-full"></span>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider">更多详情</h3>
+              </div>
+
+              <div class="space-y-4">
+                <div class="group">
+                  <label class="text-xs font-bold text-slate-700 ml-1">岗位链接</label>
+                  <div class="mt-1.5 relative">
+                    <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-primary-500 transition-colors">
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                    </span>
+                    <input id="fieldLink" type="url" placeholder="粘贴岗位详情页链接"
+                      class="w-full rounded-xl border border-slate-200 bg-slate-50/30 pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 focus:bg-white transition-all" />
+                  </div>
+                  <p id="errLink" class="hidden mt-1.5 text-[11px] text-rose-500 flex items-center gap-1">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                    链接格式无效，请检查
+                  </p>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label class="text-xs font-bold text-slate-700 ml-1">截止日期</label>
+                    <div class="mt-1.5 flex gap-2">
+                      <div class="relative flex-1">
+                        <input id="fieldDeadline" type="date"
+                          class="w-full rounded-xl border border-slate-200 bg-slate-50/30 px-3 py-2.5 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 focus:bg-white transition-all" />
+                      </div>
+                      <button id="btnClearDeadline" type="button" title="清空日期"
+                        class="shrink-0 rounded-xl border border-slate-200 bg-white px-3 flex items-center justify-center hover:bg-slate-50 active:scale-95 transition-all text-slate-600">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="group">
+                  <label class="text-xs font-bold text-slate-700 ml-1">备注信息</label>
+                  <div class="mt-1.5 relative">
+                    <textarea id="fieldNote" rows="3" maxlength="500" placeholder="记录内推人、面试重点或后续计划..."
+                      class="w-full resize-none rounded-xl border border-slate-200 bg-slate-50/30 px-4 py-3 text-sm focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-400 focus:bg-white transition-all"></textarea>
+                    <div class="absolute bottom-3 right-3 text-[10px] font-medium text-slate-400 bg-white/80 px-1.5 py-0.5 rounded-md backdrop-blur-sm border border-slate-100">
+                      <span id="noteCount">0</span>/500
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
 
-          <div class="mt-4 flex items-center justify-end gap-2">
+          <div class="mt-8 flex items-center gap-3">
             <button id="btnCancel" type="button"
-              class="rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 active:scale-[0.99] transition">
+              class="flex-1 rounded-xl border border-slate-200 bg-white py-3 text-sm font-bold text-slate-600 hover:bg-slate-50 hover:text-slate-800 active:scale-[0.98] transition-all">
               取消
             </button>
             <button id="btnSave" type="submit"
-              class="rounded-xl bg-primary-500 px-4 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-primary-600 active:scale-[0.99] transition">
-              保存
+              class="flex-[2] rounded-xl bg-primary-500 py-3 text-sm font-bold text-white shadow-lg shadow-primary-200 hover:bg-primary-600 hover:shadow-primary-300 active:scale-[0.98] transition-all flex items-center justify-center gap-2">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+              保存记录
             </button>
           </div>
         </form>
@@ -993,6 +1071,7 @@
 
       // 监听登录状态变化：完成邮箱链接回跳时会触发
       sb.auth.onAuthStateChange(async (event, session) => {
+        const oldSession = state.session;
         state.session = session ?? null;
         state.userEmail = session?.user?.email ?? '';
         updateAuthUI();
@@ -1003,21 +1082,19 @@
           return;
         }
 
-        // 如果正在重置密码，不要当作“正常登录”去拉数据/同步，避免用户看到像“已登录的主界面”
-        if (state.session && !state.resetFlow) {
+        // 核心修复：仅在登录状态发生实质性变化（从无到有）或明确的 SIGNED_IN 事件时拉取
+        // 避免 INITIAL_SESSION 或 TOKEN_REFRESHED 在用户操作中途触发（如点击页面时）导致覆盖本地最新状态
+        const isJustLoggedIn = (event === 'SIGNED_IN' || (event === 'INITIAL_SESSION' && session && !oldSession));
+
+        if (isJustLoggedIn && !state.resetFlow) {
           await cloudPullAllToState();
           // 登录后尝试同步离线队列
           await syncQueueFlush();
-        } else {
-          // 重要：某些环境下“未登录的初始事件”会在用户首次点击后才触发。
-          // 这里如果无条件覆盖 records，会造成“点一下列表瞬间消失”的错觉。
-          // 只有在明确的退出事件时，才切回本地数据并覆盖。
-          if (event === 'SIGNED_OUT') {
-            state.dataMode = 'local';
-            setRecords(loadRecords(), { allowEmpty: true, reason: 'auth_signed_out_load_local' });
-            state.renderCount = state.pageSize;
-            renderAll();
-          }
+        } else if (event === 'SIGNED_OUT') {
+          state.dataMode = 'local';
+          setRecords(loadRecords(), { allowEmpty: true, reason: 'auth_signed_out_load_local' });
+          state.renderCount = state.pageSize;
+          renderAll();
         }
       });
 
@@ -1622,22 +1699,25 @@
         deadline: deadline ? new Date(deadline + 'T00:00:00').toISOString() : ''
       };
 
-      // 统一：先写入内存（乐观更新）+ 本地持久化（避免刷新丢数据）
+      // 1. 乐观更新：先写入内存
+      const oldRecords = [...state.records];
       if (!isEdit) state.records.unshift(record);
       else {
         const idx = state.records.findIndex(r => r.id === id);
         if (idx >= 0) state.records[idx] = record;
         else state.records.unshift(record);
       }
-      // 处于登录态时，优先视为云端数据模式（即使云端写入失败，也要把新增落到 cache）
+      
+      // 2. 状态标识与持久化
       if (isCloudUsable()) state.dataMode = 'cloud';
       persistCurrentRecords();
       renderAll();
 
-      // 登录后：尝试写云端；失败则入队（但 UI/本地缓存已安全保存）
+      // 3. 异步云端同步
       if (isCloudUsable()) {
         try {
           const row = await cloudUpsert(record);
+          // 用云端返回的最新数据更新（如自动生成的 ID 或服务器时间）
           const mapped = {
             id: row.id,
             company: row.company || '',
@@ -1648,16 +1728,15 @@
             note: row.note || '',
             deadline: row.deadline ? new Date(row.deadline + 'T00:00:00').toISOString() : ''
           };
+          
           const idx = state.records.findIndex(r => r.id === id);
           if (idx >= 0) state.records[idx] = mapped;
-          else state.records.unshift(mapped);
-          state.dataMode = 'cloud';
           persistCurrentRecords();
           renderAll();
         } catch (e) {
+          // 云端失败但本地已存，记录到队列
           queuePush({ type: 'upsert', record });
-          persistCurrentRecords();
-          toast('云端写入失败：已保存到本地并加入同步队列，联网后自动同步', 'error');
+          toast('云端同步稍有延迟：已先保存至本地，联网后自动同步', 'info');
         }
       }
 
