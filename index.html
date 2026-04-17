@@ -130,7 +130,7 @@
     </div>
 
     <!-- 加载状态 -->
-    <div id="loadingState" class="flex items-center justify-center py-24">
+    <div id="loadingState" class="hidden flex items-center justify-center py-24">
       <div class="flex flex-col items-center gap-4">
         <div class="w-10 h-10 border-4 border-brand-100 border-t-brand-500 rounded-full animate-spin"></div>
         <span class="text-sm font-medium text-slate-500">正在同步数据...</span>
@@ -348,11 +348,12 @@
     /*                                Supabase 初始化                              */
     /* -------------------------------------------------------------------------- */
 
-    const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+    // 修复变量名冲突：使用 sb 作为客户端实例，避免与全局 supabase SDK 冲突
+    const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
     async function initAuth() {
       // 1. 先读取当前会话，避免 onAuthStateChange 的延迟
-      const { data: { session: initSession } } = await supabase.auth.getSession();
+      const { data: { session: initSession } } = await sb.auth.getSession();
       if (initSession) {
         state.user = initSession.user;
         await fetchCloudData();
@@ -362,7 +363,7 @@
       }
 
       // 2. 监听后续变化
-      supabase.auth.onAuthStateChange(async (event, session) => {
+      sb.auth.onAuthStateChange(async (event, session) => {
         const newUser = session?.user ?? null;
         
         if (event === 'SIGNED_IN') {
@@ -388,7 +389,7 @@
       if (!state.user || state.loading) return;
       state.loading = true;
       try {
-        const { data, error } = await supabase
+        const { data, error } = await sb
           .from('applications')
           .select('*')
           .order('applied_at', { ascending: false });
@@ -443,9 +444,9 @@
 
           let result;
           if (isEdit) {
-            result = await supabase.from('applications').update(payload).eq('id', record.id).select();
+            result = await sb.from('applications').update(payload).eq('id', record.id).select();
           } else {
-            result = await supabase.from('applications').insert([payload]).select();
+            result = await sb.from('applications').insert([payload]).select();
           }
           
           if (result.error) throw result.error;
@@ -480,7 +481,7 @@
 
       if (state.user) {
         try {
-          const { error } = await supabase.from('applications').delete().eq('id', id);
+          const { error } = await sb.from('applications').delete().eq('id', id);
           if (error) throw error;
           showToast('已从云端删除', 'success');
         } catch (err) {
@@ -689,9 +690,9 @@
         try {
           let result;
           if (isLogin) {
-            result = await supabase.auth.signInWithPassword({ email, password });
+            result = await sb.auth.signInWithPassword({ email, password });
           } else {
-            result = await supabase.auth.signUp({ email, password });
+            result = await sb.auth.signUp({ email, password });
           }
           if (result.error) throw result.error;
           
@@ -706,7 +707,7 @@
       });
 
       document.getElementById('btnLogout').addEventListener('click', async () => {
-        await supabase.auth.signOut();
+        await sb.auth.signOut();
         showToast('已安全退出', 'info');
       });
 
