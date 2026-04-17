@@ -129,7 +129,7 @@
                 <path d="M10.5 18a7.5 7.5 0 1 1 0-15 7.5 7.5 0 0 1 0 15Z" stroke="currentColor" stroke-width="2"/>
               </svg>
             </span>
-            <input id="inputSearch" type="search" placeholder="搜索公司 / 岗位（实时）"
+            <input id="inputSearch" type="search" placeholder="搜索公司 / 岗位（实时）" autocomplete="off" autocapitalize="off" spellcheck="false"
               class="w-full rounded-xl border border-slate-200 bg-white pl-10 pr-10 py-2.5 text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-4 focus:ring-primary-100 focus:border-primary-300 transition" />
             <button id="btnClearSearch" type="button" title="清空搜索"
               class="hidden absolute right-2 top-1/2 -translate-y-1/2 rounded-lg p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition">
@@ -2134,6 +2134,12 @@
         }
       } catch {}
       el.fieldAppliedAt.value = toDateTimeLocalValue(new Date());
+
+      // 防止浏览器在刷新后“恢复搜索框旧值”导致用户点一下就被过滤成 0 条，看起来像记录消失
+      state.keyword = '';
+      el.inputSearch.value = '';
+      el.btnClearSearch.classList.add('hidden');
+
       renderAll();
       bindListDelegation();
       bindSearch();
