@@ -463,7 +463,7 @@
         if (!Array.isArray(val)) return;
         
         // 安全防护
-        if (this._records.length > 0 && val.length === 0 && this._loading) {
+        if (this._records.length > 0 && val.length === 0 && this._loading && !this.user) {
           console.warn('检测到加载中的异常清空，已拦截');
           return;
         }
@@ -487,11 +487,16 @@
 
       // 持久化到本地
       saveLocal() {
+        if (this.user) return;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(this._records));
       },
       loadLocal() {
         const data = localStorage.getItem(STORAGE_KEY);
-        if (data) this._records = JSON.parse(data);
+        this._records = data ? JSON.parse(data) : [];
+      },
+      clearRecords() {
+        this._records = [];
+        this.render();
       },
 
       // 核心渲染逻辑
@@ -548,6 +553,7 @@
         setTimeout(() => openAuth('reset'), 500); // 稍微延迟确保 DOM 完全就绪
       } else if (initSession) {
         state.user = initSession.user;
+        state.clearRecords();
         await fetchCloudData();
       } else {
         state.loadLocal();
@@ -565,6 +571,7 @@
           
           if (!state.user || state.user.id !== newUser.id) {
             state.user = newUser;
+            state.clearRecords();
             await fetchCloudData();
           }
         } else if (event === 'SIGNED_OUT') {
